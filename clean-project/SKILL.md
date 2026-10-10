@@ -15,7 +15,7 @@ Stay within the project and its verified linked worktrees. Global AI histories, 
 
 ## Classify before deleting
 
-Inspect candidate content, provenance, status/history, and references from callers, tests, fixtures, config, exports, CI, and docs. Include ordinary obsolete reports, scripts, exports, and release/milestone handoffs, even without AI-related names. Include hidden/ignored candidates deliberately; avoid dependency/build-tree scans and secret contents. Enumerate exact paths, not deletion patterns; do not follow symlinks outside scope.
+Inspect candidate content, provenance, status/history, and references from callers, tests, fixtures, config, exports, CI, and docs. Include ordinary obsolete reports, scripts, exports, and release/milestone handoffs, even without AI-related names. Include hidden/ignored candidates deliberately; summarize dependency/build directories during discovery and avoid secret contents. Before retiring an entire worktree, complete the Git reference's safety inspection inside those directories too. Enumerate exact paths, not deletion patterns; do not follow symlinks outside scope.
 
 | Decision | Evidence |
 | --- | --- |

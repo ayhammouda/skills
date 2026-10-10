@@ -1,6 +1,6 @@
 # Skills
 
-Reusable agent skills. The initial skill is on `develop`; `main` intentionally contains no files until the pull request is merged.
+Reusable agent skills for project maintenance.
 
 ## Clean Project
 
@@ -10,18 +10,29 @@ Local branch deletion is opt-in. AI authorship, filenames, and age alone never j
 
 ## Install in Codex
 
-Clone the working branch:
+Clone the skills branch:
 
 ```sh
 git clone --branch develop https://github.com/ayhammouda/skills.git
 cd skills
 ```
 
-If `~/.codex/skills/clean-project` is not already installed, link this checkout:
+Link this checkout when the installation path is unused. Existing directories and links are preserved:
 
 ```sh
 mkdir -p "$HOME/.codex/skills"
-ln -s "$PWD/clean-project" "$HOME/.codex/skills/clean-project"
+skill_dest="$HOME/.codex/skills/clean-project"
+[ -e "$skill_dest" ] || [ -L "$skill_dest" ] || ln -sn "$PWD/clean-project" "$skill_dest"
 ```
 
 Invoke `$clean-project` with the project path and desired scope. A bare invocation produces a proposal. For example: “Recover this project into a shareable state; ask before consolidating useful decisions into docs.”
+
+## Verify the Git recipes
+
+With Python 3 and Git 2.36 or later, run:
+
+```sh
+python3 -B tests/test_git_safety.py
+```
+
+These checks exercise the documented commands in disposable repositories with isolated Git configuration. Some deliberately demonstrate unsafe native Git behavior inside those fixtures. They do not run cleanup against your projects or prove agent compliance with the skill.
