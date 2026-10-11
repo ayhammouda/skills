@@ -204,7 +204,7 @@ class GitSafety(unittest.TestCase):
         for kind in ["absent", "directory", "dangling", "installed"]:
             with self.subTest(kind=kind):
                 fixture_home = self.root / kind
-                dest = fixture_home / ".codex/skills/clean-project"
+                dest = fixture_home / ".agents/skills/clean-project"
                 dest.parent.mkdir(parents=True)
                 checkout = self.root / (kind + "-checkout")
                 source = checkout / "clean-project"
@@ -218,7 +218,8 @@ class GitSafety(unittest.TestCase):
                 elif kind == "installed":
                     dest.symlink_to(source)
                 # Substitute only the documented HOME reference; keep the process HOME unchanged.
-                script = install.replace('"$HOME/.codex/skills', '"' + str(fixture_home) + '/.codex/skills')
+                script = install.replace('"$HOME/.agents/skills', '"' + str(fixture_home) + '/.agents/skills')
+                self.assertNotIn("$HOME", script)
                 for _ in range(2):
                     self.run_command(["sh", "-c", script], cwd=checkout)
                 self.assertEqual({p.name for p in source.iterdir()}, {"SKILL.md"})
