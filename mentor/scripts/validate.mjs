@@ -391,6 +391,11 @@ for (const file of exampleFiles) {
     )
   ];
   check(learningResources.length > 0, `${relativePath}: no parseable Learning Compass resources found`);
+  const learningResourceLines = [...learningCompass.matchAll(/^- \*\*(?:Read first|Check next|Inspect):\*\*.*$/gm)];
+  check(
+    learningResources.length === learningResourceLines.length,
+    `${relativePath}: every Learning Compass resource must have a valid complete resource line`
+  );
 
   const firstResource = learningResources[0];
   if (firstResource) {
@@ -413,6 +418,11 @@ for (const file of exampleFiles) {
   const exploreResources = [
     ...exploreLater.matchAll(/^- `\[([^\]]+)\]` `\[([^\]]+)\]` \[([^\]]+)\]\((https?:\/\/[^)]+)\) - (.+)$/gm)
   ];
+  const exploreResourceLines = [...exploreLater.matchAll(/^- .*$/gm)];
+  check(
+    exploreResources.length === exploreResourceLines.length,
+    `${relativePath}: every Explore Later resource must have a valid complete resource line`
+  );
   for (const resource of exploreResources) {
     const [, sourceTier, mode, title, url, why] = resource;
     check(sourceTiers.has(sourceTier), `${relativePath}: unknown Explore Later source tier ${sourceTier}`);

@@ -1,0 +1,4 @@
+# Validation only; installing or using a skill does not need these packages.
+PyYAML==6.0.3
+markdown-it-py==4.2.0
+mdurl==0.1.2
