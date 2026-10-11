@@ -45,4 +45,6 @@ The public recipe regression suite also passed **13/13**, including repeat insta
 
 This is same-session skill application with independent outcome assertions, not a fresh-agent compliance evaluation. The larger fixture/verifier and detailed before/after snapshots remain in the local task workspace; this report publishes the sanitized results. A case-sensitive retention assertion was corrected in the harness after the first cleanup check; the expected information was already present. No skill change was made to obtain a pass.
 
-Not exercised: Codex-managed archive APIs, simultaneous external writers, actual volume unmounting, hosted remote authentication, or a Git/OS version matrix. Offline volume conditions were simulated by moving owned fixture checkouts. The README intentionally continues to clone `develop` while `main` is empty.
+Not exercised: Codex-managed archive APIs, simultaneous external writers, actual volume unmounting, hosted remote authentication, or a Git/OS version matrix. Offline volume conditions were simulated by moving owned fixture checkouts.
+
+**Applicability update — 2026-10-11:** This experiment preceded the first merge, when `main` was empty and the README cloned `develop`. Current installation instructions use `main`; the original results above remain evidence for the recorded skill commit. The fixture and a deterministic replay are now maintained under `tests/`; see the [testing strategy](strategy.md) for their scope. The new replay does not retrospectively turn this same-session experiment into a fresh-model evaluation.

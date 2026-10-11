@@ -1,5 +1,6 @@
 ---
 name: mentor
+license: MIT
 description: >
   Use when the user asks how to learn a technology, wants a docs-first learning direction, mentorship compass, reading path, roadmap, or curated resources for a technical subject. Triggers: "how do I learn X", "what should I read for X", "learning path for X", "docs to learn X", "resources to learn X", "best way to pick up X", "where should I start with X", "I want to get into X". Does NOT trigger for debugging, code review, implementing a feature, explaining one isolated concept, or generating hands-on tutorials unless the user explicitly asks for practice.
 ---
@@ -281,7 +282,7 @@ Use this structure:
 **Navigator's Note:** {2-4 sentences. Give direction without turning the path into a rigid curriculum.}
 ```
 
-For structured JSON output, use `references/schema.json`. Use JSON only when the user explicitly requests structured data or when the output feeds a downstream system. The default output is markdown.
+For structured JSON output, use [the output schema](references/schema.json). Use JSON only when the user explicitly requests structured data or when the output feeds a downstream system. The default output is markdown.
 
 ## Output Quality Rules
 

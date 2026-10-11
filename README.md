@@ -24,14 +24,14 @@ This is an instruction package for a coding agent, not an automatic cleanup exec
 
 [Mentor](mentor/SKILL.md) helps you learn a technical subject through a short, sequenced reading path. It prefers current official documentation, explains what to notice in each resource, offers useful references to inspect, and identifies topics to defer. It adapts to your background, goal, and time budget. Exercises and setup commands are included only when you request practice.
 
-The package includes [example outputs](mentor/examples), a [JSON output schema](mentor/references/schema.json), and [evaluation scenarios](mentor/evals/evals.json). Its instructions and resources are imported unchanged from [ayhammouda/mentor at `160a5c3`](https://github.com/ayhammouda/mentor/tree/160a5c391cfd3f124ce8127c37cc31b910b75f4d); the bundled validator checks the files included in this collection.
+The package includes [example outputs](mentor/examples), a [JSON output schema](mentor/references/schema.json), and [evaluation scenarios](mentor/evals/evals.json). It was originally imported from [ayhammouda/mentor at `160a5c3`](https://github.com/ayhammouda/mentor/tree/160a5c391cfd3f124ce8127c37cc31b910b75f4d) and is maintained in this collection. The bundled validator checks its definitions, examples, and resource structure.
 
 ## Requirements
 
 - A current coding harness with Agent Skills support and access to the installed skill files.
 - **Clean Project:** project filesystem access and shell tools; Git **2.36 or later** for the worktree and branch checks. Unsupported Git inventory leaves those operations in report-only mode; projects without Git can still receive file assessment.
 - **Mentor:** web search or a current documentation lookup tool to verify learning resources.
-- The tested installer, Skills CLI **1.7.2**, needs Node.js **22.20 or later** and `npx`. Manual installation needs neither Node.js nor Python. Validation needs Python 3 for Clean Project and Node.js 18+ for Mentor.
+- The tested installer, Skills CLI **1.7.2**, needs Node.js **22.20 or later** and `npx`. Manual installation needs neither Node.js nor Python. Collection validation needs Python 3.11+ and Node.js 18+; installer checks also need the installer's newer Node.js version.
 
 ## Install with the Skills CLI
 
@@ -150,7 +150,19 @@ If a skill is missing, check the destination, folder name, and full contents, th
 
 ## Verification
 
-From this repository, with Python 3 and Git 2.36 or later:
+Maintainers can run the complete collection checks on macOS or Linux:
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -B scripts/validate.py --install --report /tmp/skills-validation.json
+```
+
+Omit `--install` for offline validation after dependencies are installed. The full run checks package metadata, resources and licenses, both native validators, negative cases, a disposable cleanup replay, and actual file delivery through the pinned installer. Reports record the tested source hashes and any uncommitted state. See [contributing](CONTRIBUTING.md), [architecture](docs/architecture.md), and the [testing strategy and evidence limits](docs/testing/strategy.md).
+
+The [2026-10-11 acceptance results](docs/testing/2026-10-11-collection-acceptance.md) record the completed local runtime matrix and tested input hashes. They are dated evidence, not a substitute for validating a later change.
+
+The original focused Git recipe checks also run directly, with Python 3 and Git 2.36 or later:
 
 ```sh
 python3 -B tests/test_git_safety.py

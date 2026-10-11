@@ -1,0 +1,218 @@
+{
+  "evidence_kind": "deterministic checks and scripted fixture replay; no model evaluation",
+  "scope": "Condensed results from full local reports; all three runs tested identical file bytes. This summary and its narrative were added afterward.",
+  "base_commit": "0323703d98e2408ed36dbb1d9c984ef7ceca94a4",
+  "dirty_inputs": true,
+  "input_sha256": {
+    ".github/dependabot.yml": "6f409c7eb1720adce645ef906344afa8b333abb1e6f9f5b3de826da4ec314842",
+    ".github/workflows/validate.yml": "db7cac9e5b2f51304bd1b9b949d4c82478e9942e7fcb3b0fda9c7fb8ac8958dc",
+    ".gitignore": "ef7f67869cf4cb51f24fe60fe831cb416c579b273d0923977fb3f7fe086619c5",
+    "CONTRIBUTING.md": "43750a633dd343a7fc3127ba5c7aac31bc78479ce9d5644b1576c7fd0fde547a",
+    "GLOSSARY.md": "9fddb4595c86a2dff28826f5f9d45304e5812b5f82cd0fc2af3d42c71d43481b",
+    "LICENSE": "f801c6591c1cbe878fe1b918d56da893fa9a235320d19c76a98811d64fb70876",
+    "README.md": "23877c537ee9973bd6e0900bb49947e2eba207248164b4f5b91d913db1c40744",
+    "clean-project/LICENSE": "f801c6591c1cbe878fe1b918d56da893fa9a235320d19c76a98811d64fb70876",
+    "clean-project/SKILL.md": "83332764b1d670edff43ddef92d40d41c64ef9725b1554de829f1efe49c51ac9",
+    "clean-project/agents/openai.yaml": "f6b89581a090ea31b65d20acb56006f0f74029f85a8c14c0c88d8d16372adc2e",
+    "clean-project/references/git-safety.md": "22d34328f2ed5e29b99f7d75217ed5497ffb60f843907cd4c6f7840f670bb5dc",
+    "docs/architecture.md": "ffad34a5fa1cf38c76e6471647a30508c3cc82b75ebf3a460820035d77c52e0f",
+    "docs/research/2026-10-11-skills-directory-practices.md": "a1c879285b81d9161c7b2752d355c6fc8caab92f72c096c9f15d3a3e5c99ac13",
+    "docs/testing/2026-10-11-clean-project-e2e.md": "569f923a068459e200d43a9fc7f90098e9b244fac3222b337a4d8d0078f3bc14",
+    "docs/testing/strategy.md": "a7a0e1ca5e4c2be47266539d41fa44cd7a1c61e9ebd3d86d86434abff937c5ba",
+    "mentor/LICENSE": "f801c6591c1cbe878fe1b918d56da893fa9a235320d19c76a98811d64fb70876",
+    "mentor/SKILL.md": "d7fd740c9f8fab7f38721bb6c923b659ecffcef05a4ec565d11ac038787a9cf1",
+    "mentor/evals/evals.json": "c071d0e2ba635b50bf1b43afcbae497949b9f92d47e802d8be4d7c052b35986e",
+    "mentor/examples/example-output-cloud-run.md": "084185ad67ae10136b7bbd04b19b778c1da600e464944a0f5ab1f032ea6d272c",
+    "mentor/examples/example-output-react-server-components.md": "95c5146097fdb52758ca34f958f7a8b0eadaad69c8813b233adf659af0e78b5e",
+    "mentor/examples/example-output-rust.md": "370af297e77742dfa688f73195b6adf53c27492d7dd734ebb2a66b30c7cd904f",
+    "mentor/examples/example-output-terraform-modules.md": "fac2fb6242c228e52329acc9c52f8c3d41d0e37c69b7df29927b557ce3d8a4da",
+    "mentor/references/schema.json": "90b155de15de1a4b44d790c748d31b1b992807334f20ddbf1e95779ad6659aec",
+    "mentor/scripts/validate.mjs": "7435c95c058119153b5df19ff6f775117a101586c735f58a8312131ccf9e87e1",
+    "requirements-dev.txt": "8f982ed24afc41d7592677a9979ed4f33f35f5a372ec61bb72300c7b7cb6e902",
+    "scripts/validate.py": "f4f4dec447c303e9a7886016edcde6ae5c616371e53dcef95b91bcf2fe92f6bd",
+    "tests/cleanup_fixture.py": "1f5ab7b9659914cef7dc381b0052964984719becc7a6df405f87700b33ccc9bd",
+    "tests/cleanup_replay.py": "501383220eb23d36e7ecb3c290cf1588249c7151768e224920251d15b46da101",
+    "tests/test_cleanup_workflow.py": "a9519f7f0ca93ea02e4cfd938ac54800cbcd1cebf38b2e8e6a34a768637f8058",
+    "tests/test_collection.py": "56677330cc67bb7d8eade5c528f4a52dd46e8b41de4faf9131998804bb8143fd",
+    "tests/test_git_safety.py": "f4556480067c2424e6710d168dcf00c4f6f4754f6231f5c0662c1a6a0007989a",
+    "tests/test_mentor_validation.py": "5ac4a6eacca1ddf59507232541ce8d9b9dbbbbf28e1b3484c6f845b5e7e3c712",
+    "tests/test_validation_runner.py": "c958cab7db54f0114b29686fcfb80cf26f8f4328b1095625e56b81a3269a00da"
+  },
+  "installation": {
+    "cli_version": "1.7.2",
+    "runs": [
+      {
+        "mode": "symlink",
+        "agents": [
+          "codex",
+          "claude-code",
+          "github-copilot",
+          "cursor",
+          "gemini-cli",
+          "opencode",
+          "windsurf",
+          "cline",
+          "roo",
+          "amp",
+          "antigravity",
+          "antigravity-cli"
+        ],
+        "packages": [
+          "clean-project",
+          "mentor"
+        ],
+        "directories_verified": 8
+      },
+      {
+        "mode": "copy",
+        "agents": [
+          "codex",
+          "claude-code",
+          "github-copilot",
+          "cursor",
+          "gemini-cli",
+          "opencode",
+          "windsurf",
+          "cline",
+          "roo",
+          "amp",
+          "antigravity",
+          "antigravity-cli"
+        ],
+        "packages": [
+          "clean-project",
+          "mentor"
+        ],
+        "directories_verified": 8
+      }
+    ],
+    "source": "local checkout",
+    "fixtures_disposed": true,
+    "global_lock_unchanged": true
+  },
+  "runs": [
+    {
+      "report": "collection-macos-python314-final.json",
+      "report_sha256": "f006defd0b80d9871a977bd4987e3034f2165e70261e8fc8961bbf9ec8f4afa9",
+      "started_at": "2026-10-11T12:33:22.135582+00:00",
+      "finished_at": "2026-10-11T12:33:59.370561+00:00",
+      "runtime": {
+        "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.8 (main, Sep 30 2026, 17:55:09) [Clang 21.0.0 (clang-2100.3.34.2)]",
+        "git": "git version 2.56.0",
+        "node": "v26.11.1"
+      },
+      "status": "passed",
+      "tests": 55,
+      "skipped": 0,
+      "stages": [
+        {
+          "name": "collection metadata, resources, licenses, and catalog",
+          "status": "passed"
+        },
+        {
+          "name": "runtime availability",
+          "status": "passed"
+        },
+        {
+          "name": "Mentor packaged content",
+          "status": "passed"
+        },
+        {
+          "name": "regressions and disposable cleanup replay",
+          "status": "passed"
+        },
+        {
+          "name": "installed package delivery",
+          "status": "passed"
+        },
+        {
+          "name": "source preservation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "report": "collection-macos-python312-final.json",
+      "report_sha256": "abd722a98ff307e59dcd4e141531da67497211005ba20017a032198100b845a6",
+      "started_at": "2026-10-11T12:33:22.131642+00:00",
+      "finished_at": "2026-10-11T12:33:58.047475+00:00",
+      "runtime": {
+        "platform": "macOS-26.6.2-arm64-arm-64bit",
+        "python": "3.12.14 (main, Aug 25 2026, 13:50:33) [Clang 22.1.3 ]",
+        "git": "git version 2.56.0",
+        "node": "v24.19.0"
+      },
+      "status": "passed",
+      "tests": 55,
+      "skipped": 0,
+      "stages": [
+        {
+          "name": "collection metadata, resources, licenses, and catalog",
+          "status": "passed"
+        },
+        {
+          "name": "runtime availability",
+          "status": "passed"
+        },
+        {
+          "name": "Mentor packaged content",
+          "status": "passed"
+        },
+        {
+          "name": "regressions and disposable cleanup replay",
+          "status": "passed"
+        },
+        {
+          "name": "installed package delivery",
+          "status": "passed"
+        },
+        {
+          "name": "source preservation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "report": "linux-validation-final.json",
+      "report_sha256": "a6f8fe94abdfc46d1c3868adba74cad14b26a86a435f94ca256c520c445b6a46",
+      "started_at": "2026-10-11T12:33:29.873273+00:00",
+      "finished_at": "2026-10-11T12:33:39.332277+00:00",
+      "runtime": {
+        "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+        "python": "3.11.2 (main, Oct  7 2026, 12:35:07) [GCC 12.2.0]",
+        "git": "git version 2.53.0",
+        "node": "v22.22.2"
+      },
+      "status": "passed",
+      "tests": 55,
+      "skipped": 0,
+      "stages": [
+        {
+          "name": "collection metadata, resources, licenses, and catalog",
+          "status": "passed"
+        },
+        {
+          "name": "runtime availability",
+          "status": "passed"
+        },
+        {
+          "name": "Mentor packaged content",
+          "status": "passed"
+        },
+        {
+          "name": "regressions and disposable cleanup replay",
+          "status": "passed"
+        },
+        {
+          "name": "installed package delivery",
+          "status": "passed"
+        },
+        {
+          "name": "source preservation",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}

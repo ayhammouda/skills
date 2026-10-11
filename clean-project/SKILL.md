@@ -1,5 +1,6 @@
 ---
 name: clean-project
+license: MIT
 description: "Use when recovering an old dirty project, finishing a major milestone or release, or preparing a project for handoff, and obsolete files, temporary AI artifacts, outdated documentation, or stale Git worktrees need cleanup. Also applies to requested local branch cleanup after upstream deletion. Not for general code refactoring or dependency upgrades."
 ---
 
