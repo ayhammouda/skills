@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MentorCompass",
+  "description": "Machine-readable output contract for the Mentor skill. Use this schema when the user explicitly requests structured JSON output or when the output feeds a downstream system. The default output format is markdown.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "topic",
+    "topic_scope",
+    "assumptions",
+    "why_this_topic_is_tricky",
+    "learning_compass",
+    "explore_later",
+    "checkpoints",
+    "avoid_for_now",
+    "next_topics",
+    "navigators_note"
+  ],
+  "properties": {
+    "topic": {
+      "type": "string"
+    },
+    "topic_scope": {
+      "type": "string",
+      "enum": [
+        "broad",
+        "narrow",
+        "time-boxed"
+      ]
+    },
+    "assumptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "goal",
+        "time_budget",
+        "context"
+      ],
+      "properties": {
+        "level": {
+          "type": "string"
+        },
+        "goal": {
+          "type": "string"
+        },
+        "time_budget": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        }
+      }
+    },
+    "why_this_topic_is_tricky": {
+      "type": "string"
+    },
+    "learning_compass": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "iteration",
+          "focus",
+          "read_first",
+          "check_next",
+          "inspect",
+          "what_to_notice",
+          "stop_before"
+        ],
+        "properties": {
+          "iteration": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "focus": {
+            "type": "string"
+          },
+          "read_first": {
+            "$ref": "#/$defs/resource"
+          },
+          "check_next": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/resource"
+            }
+          },
+          "inspect": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/resource"
+            }
+          },
+          "what_to_notice": {
+            "type": "string"
+          },
+          "stop_before": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "explore_later": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "purpose",
+          "resources"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/resource"
+            }
+          }
+        }
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "avoid_for_now": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "next_topics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "navigators_note": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_tier",
+        "mode",
+        "title",
+        "url",
+        "why_here_now"
+      ],
+      "properties": {
+        "source_tier": {
+          "type": "string",
+          "enum": [
+            "Official Docs",
+            "Official Blog",
+            "Official Guide",
+            "Official Learning",
+            "Official Reference",
+            "Official Release Notes",
+            "Official Spec",
+            "Official Tutorial",
+            "Official Exercise Repo",
+            "Official Sample Repo",
+            "Maintainer Docs",
+            "Maintainer Explainer",
+            "Vendor Architecture Guide",
+            "Vendor Blog",
+            "Engineering Blog",
+            "Community Guide"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "Read first",
+            "Read next",
+            "Skim for context",
+            "Inspect",
+            "Bookmark",
+            "Practice later"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "why_here_now": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
