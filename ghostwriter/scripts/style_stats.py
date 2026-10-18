@@ -10,6 +10,8 @@ created with owner-only permissions.
 Standard library only. Run as: python3 -I style_stats.py CORPUS [options]
 """
 
+from __future__ import annotations
+
 import argparse
 from collections import Counter
 import json

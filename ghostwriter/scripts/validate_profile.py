@@ -13,6 +13,8 @@ Standard library only. Run as:
   python3 -I validate_profile.py --list            list slug, kind, location
 """
 
+from __future__ import annotations
+
 import argparse
 from datetime import datetime
 import os

@@ -42,7 +42,7 @@ Profiles you create, and the corpus behind your own, live in `~/.config/ghostwri
 - A current coding harness with Agent Skills support and access to the installed skill files.
 - **Clean Project:** project filesystem access and shell tools; Git **2.36 or later** for the worktree and branch checks. Unsupported Git inventory leaves those operations in report-only mode; projects without Git can still receive file assessment.
 - **Mentor:** web search or a current documentation lookup tool to verify learning resources.
-- **Ghostwriter:** Python 3.10 or later for the bundled scripts, which use only the standard library. Building your `me` profile reads `~/.claude/`, so it works where Claude Code has run; researching a new persona needs web search.
+- **Ghostwriter:** Python 3.9 or later for the bundled scripts, which use only the standard library; macOS ships 3.9 as `/usr/bin/python3`. Building your `me` profile reads `~/.claude/`, so it works where Claude Code has run; researching a new persona needs web search.
 - The tested installer, Skills CLI **1.7.2**, needs Node.js **22.20 or later** and `npx`. Manual installation needs neither Node.js nor Python. Validation needs Python 3 for Clean Project and Node.js 18+ for Mentor.
 
 ## Install with the Skills CLI
@@ -192,7 +192,7 @@ These checks exercise documented commands in disposable repositories with isolat
 
 The [dated end-to-end report](docs/testing/2026-10-11-clean-project-e2e.md) covers temporary artifacts, stale worktrees, deleted upstream branches, useful notes retained in docs, and preservation of user work. Installation guidance is based on the linked vendor documentation; cleanup behavior has not been tested in every harness or on every operating system.
 
-For Ghostwriter, with Python 3.10 or later:
+For Ghostwriter, with Python 3.9 or later:
 
 ```sh
 python3 -B tests/test_ghostwriter.py

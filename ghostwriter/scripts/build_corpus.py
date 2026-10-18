@@ -14,6 +14,8 @@ writes <out-dir>/<slug>.corpus.jsonl with owner-only permissions.
 Standard library only. Run as: python3 -I build_corpus.py [options]
 """
 
+from __future__ import annotations
+
 import argparse
 from collections import Counter
 from dataclasses import asdict, dataclass
