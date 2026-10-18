@@ -6,6 +6,7 @@ Reusable [Agent Skills](https://agentskills.io/specification) for project mainte
 | --- | --- |
 | [clean-project](clean-project/SKILL.md) | Prepare old projects, milestones, and releases for handoff while preserving user work and useful decisions. |
 | [mentor](mentor/SKILL.md) | Build a focused learning path from current documentation, with reading guidance and optional deeper topics. |
+| [ghostwriter](ghostwriter/SKILL.md) | Draft replies, posts, and emails in your own voice or a researched persona, with AI writing patterns removed, from stored tone profiles. |
 
 The **v0.1** release contains `clean-project` only. The commands below use `main` for the current collection.
 
@@ -26,11 +27,22 @@ This is an instruction package for a coding agent, not an automatic cleanup exec
 
 The package includes [example outputs](mentor/examples), a [JSON output schema](mentor/references/schema.json), and [evaluation scenarios](mentor/evals/evals.json). Its instructions and resources are imported unchanged from [ayhammouda/mentor at `160a5c3`](https://github.com/ayhammouda/mentor/tree/160a5c391cfd3f124ce8127c37cc31b910b75f4d); the bundled validator checks the files included in this collection.
 
+## What Ghostwriter does
+
+[Ghostwriter](ghostwriter/SKILL.md) drafts email replies, Reddit comments, tweets, and other posts in a stored voice, then audits each draft for AI writing patterns and for fidelity to that voice. Voices are **tone profiles**: Markdown files that record how one voice writes, from rhythm and punctuation habits to signature phrases, per-channel length, and polish.
+
+- **Your own voice:** the `me` profile is built from your Claude Code prompts on your machine. Bundled scripts extract and scrub the prompts, measure your style, and draw a sample; you confirm the profile before it is saved.
+- **Personas:** a named voice such as a character or public figure is researched once and saved as a profile, so later drafts reuse it without new research. `deadpool` and `morgan-freeman` ship as examples.
+- **Samples:** text you supply, such as sent emails, can become its own profile.
+
+Profiles you create, and the corpus behind your own, live in `~/.config/ghostwriter/` (or `$GHOSTWRITER_HOME`) with owner-only permissions, outside this repository and the installed skill. **Ghostwriter produces drafts only; you send or post them yourself.** It writes as you: a persona shapes the style, never the signature. Its AI-pattern list is condensed from [blader/humanizer](https://github.com/blader/humanizer) (MIT) and Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
+
 ## Requirements
 
 - A current coding harness with Agent Skills support and access to the installed skill files.
 - **Clean Project:** project filesystem access and shell tools; Git **2.36 or later** for the worktree and branch checks. Unsupported Git inventory leaves those operations in report-only mode; projects without Git can still receive file assessment.
 - **Mentor:** web search or a current documentation lookup tool to verify learning resources.
+- **Ghostwriter:** Python 3.10 or later for the bundled scripts, which use only the standard library. Building your `me` profile reads `~/.claude/`, so it works where Claude Code has run; researching a new persona needs web search.
 - The tested installer, Skills CLI **1.7.2**, needs Node.js **22.20 or later** and `npx`. Manual installation needs neither Node.js nor Python. Validation needs Python 3 for Clean Project and Node.js 18+ for Mentor.
 
 ## Install with the Skills CLI
@@ -45,6 +57,12 @@ For Mentor, use:
 
 ```sh
 npx skills add ayhammouda/skills --skill mentor
+```
+
+For Ghostwriter, use:
+
+```sh
+npx skills add ayhammouda/skills --skill ghostwriter
 ```
 
 To choose from the collection interactively, omit `--skill`:
@@ -88,7 +106,7 @@ cd skills
 
 For the original Clean Project release, add `--branch v0.1` to the clone command instead.
 
-Copy the **entire folder of each skill you want** (`clean-project/` or `mentor/`), including its supporting files and `LICENSE`, into one of the locations below. The resulting path must end in `skills/clean-project/SKILL.md` or `skills/mentor/SKILL.md`. Choose project scope to share the skill through version control, or user scope for your own projects. Do not replace an existing installation without preserving your changes.
+Copy the **entire folder of each skill you want** (`clean-project/`, `mentor/`, or `ghostwriter/`), including its supporting files and `LICENSE`, into one of the locations below. The resulting path must end in `skills/<skill-name>/SKILL.md`, such as `skills/mentor/SKILL.md`. Choose project scope to share the skill through version control, or user scope for your own projects. Do not replace an existing installation without preserving your changes.
 
 Paths below are native manual-install locations from the linked harness documentation. The installer may use a shared `.agents/skills/` directory instead. `~` means your home directory (`%USERPROFILE%` on Windows); custom configuration roots may differ.
 
@@ -108,7 +126,7 @@ Paths below are native manual-install locations from the linked harness document
 
 Cline's documentation recommends its native directories; if an installer-created shared path is not discovered by your version, use the manual location above. Newer Windsurf/Devin Desktop versions also support `.devin/skills/`. Antigravity CLI uses `~/.gemini/antigravity-cli/skills/` and installer ID `antigravity-cli`.
 
-For Codex on macOS/Linux, you can link a cloned skill folder instead of copying it. This Clean Project example runs from the cloned repository root; existing directories and links are left untouched. To link Mentor, replace both occurrences of `clean-project` with `mentor`:
+For Codex on macOS/Linux, you can link a cloned skill folder instead of copying it. This Clean Project example runs from the cloned repository root; existing directories and links are left untouched. To link another skill, replace both occurrences of `clean-project` with its folder name:
 
 ```sh
 mkdir -p "$HOME/.agents/skills"
@@ -120,7 +138,7 @@ Keep that checkout in place while using the link. On Windows, copy the folder or
 
 ## Use the skills
 
-Start a new session or reload your harness's skills, then confirm the installed names appear in its skill picker/list. In Codex, invoke **`$clean-project`** or **`$mentor`**. In other supporting harnesses, explicitly ask to use the named skill.
+Start a new session or reload your harness's skills, then confirm the installed names appear in its skill picker/list. In Codex, invoke **`$clean-project`**, **`$mentor`**, or **`$ghostwriter`**. In other supporting harnesses, explicitly ask to use the named skill.
 
 ### Clean Project
 
@@ -146,6 +164,20 @@ Give your topic and any useful background or time limit:
 
 Request structured JSON explicitly if you need output conforming to the bundled schema. The default is a Markdown reading path.
 
+### Ghostwriter
+
+Paste what you are answering and say what you want to get across:
+
+> Reply to this Reddit comment in my voice: "Local is overkill for most people, hosted is fine." My take: I run most of mine locally because hosted ones drop auth mid session, but hosted is fine for Google Docs.
+
+> Write a reply to this email as me. I'm interested, only free Thursday afternoon, and I want to know if the role is remote first.
+
+> Draft a tweet as me announcing that my new skill is out.
+
+> Rewrite my reply in Deadpool's voice at intensity 2.
+
+The first request in your own voice builds the `me` profile and asks you to confirm it. Feedback such as "I would never say that" tunes the profile. Ask to "list tones" to see every profile.
+
 If a skill is missing, check the destination, folder name, and full contents, then reload the harness. If it lacks native skill discovery, explicitly ask it to read the skill's `SKILL.md` and required references before acting. Cloud and remote sessions need the skill installed in that environment; a local user installation alone is insufficient.
 
 ## Verification
@@ -159,6 +191,15 @@ python3 -B tests/test_git_safety.py
 These checks exercise documented commands in disposable repositories with isolated Git configuration. Some deliberately demonstrate unsafe native Git behavior inside those fixtures. They never clean your projects and do not prove that every model follows the skill.
 
 The [dated end-to-end report](docs/testing/2026-10-11-clean-project-e2e.md) covers temporary artifacts, stale worktrees, deleted upstream branches, useful notes retained in docs, and preservation of user work. Installation guidance is based on the linked vendor documentation; cleanup behavior has not been tested in every harness or on every operating system.
+
+For Ghostwriter, with Python 3.10 or later:
+
+```sh
+python3 -B tests/test_ghostwriter.py
+python3 -I ghostwriter/scripts/validate_profile.py --all
+```
+
+The tests run the corpus, stylometrics, and validation scripts against synthetic fixtures; they never read your own Claude Code data. The validator checks every shipped profile and every profile in your `~/.config/ghostwriter/tones/`. Neither proves that a model writes convincingly in a voice.
 
 For Mentor, with Node.js 18 or later and no dependency installation:
 
