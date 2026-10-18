@@ -29,6 +29,7 @@ WORD_RE = re.compile(r"[A-Za-zÀ-ſ][A-Za-zÀ-ſ'’]*")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 CONTRACTION_RE = re.compile(r"\b\w+['’](s|t|re|ve|ll|d|m)\b", re.IGNORECASE)
 EMOJI_RE = re.compile("[\U0001F300-\U0001FAFF☀-➿]")
+PLACEHOLDER_RE = re.compile(r"<(?:URL|EMAIL|TOKEN|IP|PHONE)>")
 
 ENGLISH = set("the a an and to of is it that for you this with on are be i we can in".split())
 FRENCH = set("le la les des une est pas pour que qui dans avec sur je tu nous vous et ou mais donc".split())
@@ -50,7 +51,7 @@ HALVES = ("older", "newer")
 
 
 def words(text: str) -> list[str]:
-    return [w.lower() for w in WORD_RE.findall(text)]
+    return [w.lower() for w in WORD_RE.findall(PLACEHOLDER_RE.sub(" ", text))]
 
 
 def sentences(text: str) -> list[str]:
@@ -99,7 +100,7 @@ def _pairs(counter: Counter, limit: int) -> list[list]:
 
 
 def compute_stats(items: list[dict]) -> dict:
-    texts = [item["text"] for item in items]
+    texts = [PLACEHOLDER_RE.sub(" ", item["text"]).strip() for item in items]
     tokens = [words(text) for text in texts]
     sentence_lengths = [len(words(s)) for t in texts for s in sentences(t) if words(s)]
     dated = sorted(item["timestamp"] for item in items if item.get("timestamp"))

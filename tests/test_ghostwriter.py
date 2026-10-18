@@ -207,6 +207,35 @@ class BuildCorpus(TempDirCase):
         self.assertEqual(items, [])
         self.assertEqual(json.loads(result.stdout)["items"], 0)
 
+    def test_skip_reasons_are_counted(self):
+        result, _ = self.build_ok()
+        summary = json.loads(result.stdout)
+        self.assertEqual(summary["skipped"], {"malformed": 1, "sidechain": 1, "meta": 1, "compact": 1,
+                                              "sdk": 1, "origin": 1})
+        self.assertEqual(summary["dropped"]["skipped_record"], 6)
+
+    def test_ide_and_hook_blocks_removed(self):
+        claude = self.root / "claude-ide"
+        write_jsonl(claude / "projects/-x-p/s.jsonl", [
+            user([{"type": "text", "text": "<ide_selection>The user selected the lines 10 to 20 from app.py: "
+                                           "if token == SECRET: grant()</ide_selection>"},
+                  {"type": "text", "text": "why does this fail on refresh"}]),
+            user("<ide_opened_file>The user opened the file app.py in the IDE. This may or may not be "
+                 "related.</ide_opened_file>can you fix the login bug please"),
+            user("<user-prompt-submit-hook>[11:32 CEST -- someone]</user-prompt-submit-hook>"
+                 "keep the header as it is please"),
+            user("make the footer logo bigger please <system-reminder>unclosed reminder text the harness wrote"),
+        ])
+        out = self.root / "out-ide"
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "build_corpus.py"),
+                                 "--claude-dir", str(claude), "--out-dir", str(out)],
+                                capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        texts = [json.loads(line)["text"] for line in (out / "me.corpus.jsonl").read_text().splitlines()]
+        self.assertEqual(sorted(texts), sorted(["why does this fail on refresh", "can you fix the login bug please",
+                                                "keep the header as it is please",
+                                                "make the footer logo bigger please"]))
+
 
 class CleanText(unittest.TestCase):
     def setUp(self):
@@ -294,6 +323,14 @@ class StyleStats(TempDirCase):
                                     "timestamp": None, "project": None}])
         self.assertEqual(stats["language"], {"en": 0, "fr": 1, "other": 0})
         self.assertEqual(stats["date_span"], {"first": None, "last": None})
+
+    def test_placeholders_are_not_words(self):
+        mod = load("style_stats")
+        self.assertEqual(mod.words("check <URL> now, ping <EMAIL> please"), ["check", "now", "ping", "please"])
+        stats = mod.compute_stats([{"text": "check <URL> now please", "source": "history",
+                                    "timestamp": None, "project": None}])
+        self.assertEqual(stats["words"], 3)
+        self.assertNotIn("url", [w for w, _ in stats["top_words"]])
 
     def test_sample_is_deterministic_and_sized(self):
         self.run_stats(SIX_ITEMS, "--sample-size", "4", "--seed", "7")
@@ -471,6 +508,20 @@ class ValidateProfile(TempDirCase):
     def test_crlf_and_bom_profile_passes(self):
         result = self.validate("valid.md", "\ufeff" + VALID_PROFILE.replace("\n", "\r\n"))
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    @unittest.skipIf(os.name == "nt", "POSIX permissions")
+    def test_user_profile_with_open_permissions_fails(self):
+        home = self.root / "cfg"
+        (home / "tones").mkdir(parents=True)
+        path = home / "tones/valid.md"
+        path.write_text(VALID_PROFILE)
+        os.chmod(path, 0o644)
+        command = [sys.executable, "-I", str(SCRIPTS / "validate_profile.py"), str(path), "--home", str(home)]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("mode 644, expected 600", result.stdout)
+        os.chmod(path, 0o600)
+        self.assertEqual(subprocess.run(command, capture_output=True, text=True, timeout=60).returncode, 0)
 
     def test_template_validates_structurally(self):
         result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"),

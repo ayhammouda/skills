@@ -194,7 +194,21 @@ def _check_body(body: str, kind, template: bool) -> list[str]:
     return problems
 
 
-def validate(path: Path) -> list[str]:
+def _permission_problems(path: Path, home: Path | None) -> list[str]:
+    """Profiles under the user directory must be private to their owner (POSIX only)."""
+    if home is None or os.name == "nt":
+        return []
+    try:
+        resolved, root = path.resolve(), home.resolve()
+        if root not in resolved.parents:
+            return []
+        mode = resolved.stat().st_mode & 0o777
+    except OSError:
+        return []
+    return [f"mode {mode:o}, expected 600 (chmod 600 {path})"] if mode & 0o077 else []
+
+
+def validate(path: Path, home: Path | None = None) -> list[str]:
     """Return the problems found in one profile; an empty list means valid."""
     try:
         text = path.read_text(encoding="utf-8-sig")
@@ -205,7 +219,8 @@ def validate(path: Path) -> list[str]:
     except ValueError as error:
         return [str(error) if str(error) == "missing front matter" else f"invalid front matter: {error}"]
     template = path.stem.startswith("_")
-    return _check_keys(data, path.stem, template) + _check_body(body, data.get("kind"), template)
+    return (_check_keys(data, path.stem, template) + _check_body(body, data.get("kind"), template)
+            + _permission_problems(path, home))
 
 
 def _profiles(directory: Path) -> dict[str, Path]:
@@ -265,7 +280,7 @@ def main(argv: list[str]) -> int:
         return 2
     failed = False
     for path in targets:
-        problems = validate(path)
+        problems = validate(path, home)
         if problems:
             failed = True
             for problem in problems:

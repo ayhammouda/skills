@@ -33,14 +33,16 @@ from typing import Iterator
 HARNESS_TAGS = (
     "system-reminder", "task-notification", "pasted_content", "command-name",
     "command-message", "command-args", "local-command-stdout", "local-command-stderr",
-    "local-command-caveat", "side-sessions-event", "ci-monitor-event",
+    "local-command-caveat", "side-sessions-event", "ci-monitor-event", "ide_selection",
+    "ide_opened_file", "user-prompt-submit-hook",
 )
 _TAG_ALTERNATION = "|".join(re.escape(tag) for tag in HARNESS_TAGS)
 BLOCK_RE = re.compile(rf"<({_TAG_ALTERNATION})\b[^>]*>.*?</\1\s*>", re.IGNORECASE | re.DOTALL)
-STRAY_TAG_RE = re.compile(rf"</?(?:{_TAG_ALTERNATION})\b[^>]*>", re.IGNORECASE)
+OPEN_TAG_RE = re.compile(rf"<(?:{_TAG_ALTERNATION})\b[^>]*>", re.IGNORECASE)
+CLOSE_TAG_RE = re.compile(rf"</(?:{_TAG_ALTERNATION})\s*>", re.IGNORECASE)
 FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 MARKER_RE = re.compile(r"\[(?:Pasted text #\d+(?: \+\d+ lines)?|Image #\d+)\]")
-MARKUP_RE = re.compile(r"<[a-z][a-z0-9-]*(\s[^<>]*)?/?>")
+MARKUP_RE = re.compile(r"<[a-z][a-z0-9_-]*(\s[^<>]*)?/?>")
 
 QUOTE_LINE_RE = re.compile(r"^\s*>")
 INTERRUPT_LINE_RE = re.compile(r"^\s*\[Request interrupted")
@@ -81,6 +83,7 @@ IP_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 PHONE_RE = re.compile(r"\+?\d(?:[ .]?\d){8,14}")
 
 DROP_REASONS = ("slash", "short", "long", "markup", "duplicate", "skipped_record", "before_since")
+SKIP_REASONS = ("malformed", "sidechain", "meta", "compact", "sdk", "origin")
 
 
 @dataclass
@@ -109,7 +112,10 @@ def clean_text(text: str) -> str:
     """Return the person's own words from one prompt, on a single line."""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = BLOCK_RE.sub(" ", text)
-    text = STRAY_TAG_RE.sub(" ", text)
+    text = CLOSE_TAG_RE.sub(" ", text)
+    unclosed = OPEN_TAG_RE.search(text)
+    if unclosed:
+        text = text[:unclosed.start()]
     text = FENCE_RE.sub("\n", text)
     if "```" in text:
         text = text[:text.index("```")]
@@ -164,6 +170,7 @@ def _read_json_lines(path: Path, counts: Counter):
                 record = json.loads(line)
             except json.JSONDecodeError:
                 counts["skipped_record"] += 1
+                counts["skip_malformed"] += 1
                 continue
             if isinstance(record, dict):
                 yield record
@@ -187,14 +194,18 @@ def iter_history(path: Path, counts: Counter | None = None) -> Iterator[Item]:
                    Path(project).name if isinstance(project, str) and project else None)
 
 
-def _machine_written(record: dict) -> bool:
-    if any(record.get(flag) for flag in ("isSidechain", "isMeta", "isCompactSummary")):
-        return True
+def _skip_reason(record: dict) -> str | None:
+    """Name why a user record was not typed by the person, or None when it was."""
+    for flag, reason in (("isSidechain", "sidechain"), ("isMeta", "meta"), ("isCompactSummary", "compact")):
+        if record.get(flag):
+            return reason
     entrypoint = record.get("entrypoint")
     if isinstance(entrypoint, str) and entrypoint.startswith("sdk-"):
-        return True
+        return "sdk"
     origin = record.get("origin")
-    return isinstance(origin, dict) and "kind" in origin and origin["kind"] != "human"
+    if isinstance(origin, dict) and "kind" in origin and origin["kind"] != "human":
+        return "origin"
+    return None
 
 
 def iter_transcripts(projects_dir: Path, counts: Counter | None = None) -> Iterator[Item]:
@@ -217,8 +228,10 @@ def iter_transcripts(projects_dir: Path, counts: Counter | None = None) -> Itera
             else:
                 continue
             counts["transcript_records"] += 1
-            if _machine_written(record):
+            reason = _skip_reason(record)
+            if reason:
                 counts["skipped_record"] += 1
+                counts[f"skip_{reason}"] += 1
                 continue
             cwd = record.get("cwd")
             project = Path(cwd).name if isinstance(cwd, str) and cwd else path.parent.name
@@ -297,6 +310,7 @@ def build(claude_dir: Path, out_dir: Path, slug: str, since: str | None, min_wor
         _write_private(out_path, kept)
     return {"items": len(kept), "history_rows": counts["history_rows"],
             "transcript_records": counts["transcript_records"], "dropped": dropped,
+            "skipped": {reason: counts[f"skip_{reason}"] for reason in SKIP_REASONS},
             "out": str(out_path)}
 
 
