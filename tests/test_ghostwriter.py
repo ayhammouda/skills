@@ -234,5 +234,94 @@ class CleanText(unittest.TestCase):
         self.assertEqual(self.mod.clean_text(text), "keep this line")
 
 
+SIX_ITEMS = [
+    {"text": text, "source": "history", "timestamp": f"2026-01-0{n}T10:00:00Z", "project": "proj-a"}
+    for n, text in enumerate([
+        "can we do that ?",
+        "Please fix the login bug.",
+        "let's commit the current state of the code",
+        "Fix it now!",
+        "It's basically a hero banner : the picture is here.",
+        "why is the mcp file under a folder called unknown",
+    ], start=1)
+]
+
+
+class StyleStats(TempDirCase):
+    def run_stats(self, items, *extra):
+        corpus = self.root / "me.corpus.jsonl"
+        corpus.write_text("".join(json.dumps(i) + "\n" for i in items))
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "style_stats.py"), str(corpus), *extra],
+                                capture_output=True, text=True, timeout=60)
+        stats_path = self.root / "me.stats.json"
+        stats = json.loads(stats_path.read_text()) if stats_path.exists() else None
+        return result, stats
+
+    def test_counts_and_rates(self):
+        result, s = self.run_stats(SIX_ITEMS)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(s["items"], 6)
+        self.assertEqual(s["words"], 39)
+        self.assertEqual(s["sources"], {"history": 6})
+        r = s["rates"]
+        self.assertEqual(r["lowercase_start"], 0.5)
+        self.assertEqual(r["no_terminal_punct"], 0.333)
+        self.assertEqual(r["question"], 0.167)
+        self.assertEqual(r["exclamation"], 0.167)
+        self.assertEqual(r["contraction"], 0.333)
+        self.assertEqual(r["imperative_start"], 0.167)
+        self.assertEqual(r["space_before_question"], 1.0)
+        self.assertEqual(r["space_before_colon"], 1.0)
+        self.assertEqual(r["space_before_exclaim"], 0.0)
+        self.assertEqual(r["em_dash"], 0.0)
+        self.assertEqual(s["markers"]["please"], 1)
+        self.assertEqual(s["markers"]["basically"], 1)
+        self.assertEqual(s["markers"]["let's"], 1)
+        self.assertEqual(s["markers"]["thanks"], 0)
+        self.assertEqual(s["sentence_length"], {"count": 6, "mean": 6.5, "median": 6.5, "p90": 10})
+        self.assertEqual(s["item_words"], {"mean": 6.5, "median": 6.5, "p90": 10, "max": 10})
+        self.assertIn(["fix", 2], s["top_words"])
+        self.assertNotIn("the", [w for w, _ in s["top_words"]])
+        self.assertIn(["the current state", 1], s["top_trigrams"])
+        self.assertIn(["fix it", 1], s["top_openers"])
+        self.assertIn(["picture is here", 1], s["top_closers"])
+        self.assertEqual(s["language"], {"en": 6, "fr": 0, "other": 0})
+        self.assertEqual(s["date_span"], {"first": "2026-01-01T10:00:00Z", "last": "2026-01-06T10:00:00Z"})
+
+    def test_language_detects_french(self):
+        mod = load("style_stats")
+        stats = mod.compute_stats([{"text": "je pense que le code est pas fini", "source": "sample",
+                                    "timestamp": None, "project": None}])
+        self.assertEqual(stats["language"], {"en": 0, "fr": 1, "other": 0})
+        self.assertEqual(stats["date_span"], {"first": None, "last": None})
+
+    def test_sample_is_deterministic_and_sized(self):
+        self.run_stats(SIX_ITEMS, "--sample-size", "4", "--seed", "7")
+        first = (self.root / "me.sample.md").read_text()
+        self.run_stats(SIX_ITEMS, "--sample-size", "4", "--seed", "7")
+        self.assertEqual(first, (self.root / "me.sample.md").read_text())
+        self.assertEqual(first.count("\n- ("), 4)
+        for heading in ("## short", "## medium", "## long"):
+            self.assertIn(heading, first)
+
+    def test_sample_larger_than_corpus_takes_everything(self):
+        self.run_stats(SIX_ITEMS, "--sample-size", "80")
+        sample = (self.root / "me.sample.md").read_text()
+        self.assertEqual(sample.count("\n- ("), 6)
+        self.assertIn("- (history, 2026-01-04, 3 words) Fix it now!", sample)
+
+    def test_outputs_are_private(self):
+        self.run_stats(SIX_ITEMS)
+        for name in ("me.stats.json", "me.sample.md"):
+            self.assertEqual(oct((self.root / name).stat().st_mode & 0o777), "0o600", name)
+
+    def test_empty_corpus_exits_2(self):
+        result, s = self.run_stats([])
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("empty corpus", result.stderr)
+        self.assertIsNone(s)
+        self.assertFalse((self.root / "me.sample.md").exists())
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
