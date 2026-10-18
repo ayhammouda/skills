@@ -323,5 +323,182 @@ class StyleStats(TempDirCase):
         self.assertFalse((self.root / "me.sample.md").exists())
 
 
+VALID_PROFILE = """---
+name: Valid Example
+slug: valid
+kind: sample
+version: 1
+created: 2026-10-18
+updated: 2026-10-18
+language: en
+sources:
+  - pasted sample
+confidence: low
+channels: [email, reddit, tweet, other]
+---
+
+# Valid Example
+
+## Identity and stance
+A calm engineer who answers the question first.
+
+## Register
+Plain, warm, direct.
+
+## Rhythm and shape
+Short sentences, two paragraphs at most.
+
+## Lexicon
+Uses ok and sure. Never uses leverage.
+
+## Syntax and mechanics
+Contractions, sentence case, no emoji.
+
+## Devices
+Explains with one concrete example.
+
+## Openers and closers
+Opens with the answer. Closes with the next step.
+
+## Channel dials
+### email
+length: short; formality: medium; polish: standard; sign-off: first name
+### reddit
+length: short; formality: low; polish: loose; sign-off: none
+### tweet
+length: one line; formality: low; polish: loose; sign-off: none
+### other
+length: as needed; formality: medium; polish: standard; sign-off: none
+
+## Do / Don't
+- Do answer first.
+- Don't apologize.
+
+## Exemplars
+- First exemplar of the voice, short and plain.
+- Second exemplar that answers a question directly.
+- Third exemplar with a concrete next step.
+
+## Anti-tells
+No rule of three, no em dashes.
+
+## Provenance
+Built from a pasted sample on 2026-10-18.
+"""
+PERSONA_PROFILE = VALID_PROFILE.replace("kind: sample", "kind: persona\ndefault_intensity: 3")
+
+
+class ValidateProfile(TempDirCase):
+    def validate(self, name, text, *extra, env=None):
+        path = self.root / name
+        path.write_text(text, encoding="utf-8")
+        return subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"), str(path), *extra],
+                              capture_output=True, text=True, timeout=60, env=env)
+
+    def quote_profile(self, size):
+        quote = '"' + " ".join(["w"] * size) + '"'
+        return PERSONA_PROFILE.replace("## Lexicon\n", "## Lexicon\nSays " + quote + "\n")
+
+    def test_valid_profile_passes(self):
+        result = self.validate("valid.md", VALID_PROFILE)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(result.stdout.startswith("OK "))
+
+    def test_missing_heading_fails(self):
+        result = self.validate("valid.md", VALID_PROFILE.replace("## Devices\n", ""))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("missing heading: Devices", result.stdout)
+
+    def test_headings_out_of_order_fail(self):
+        swapped = VALID_PROFILE.replace("## Register\n", "## TMP\n").replace(
+            "## Identity and stance\n", "## Register\n").replace("## TMP\n", "## Identity and stance\n")
+        result = self.validate("valid.md", swapped)
+        self.assertIn("headings out of order", result.stdout)
+
+    def test_missing_channel_fails(self):
+        result = self.validate("valid.md", VALID_PROFILE.replace("### tweet\n", ""))
+        self.assertIn("missing channel: tweet", result.stdout)
+
+    def test_missing_key_and_bad_values_fail(self):
+        broken = VALID_PROFILE.replace("confidence: low\n", "").replace("kind: sample", "kind: robot")
+        result = self.validate("valid.md", broken)
+        self.assertIn("missing key: confidence", result.stdout)
+        self.assertIn("invalid kind: robot", result.stdout)
+
+    def test_forty_word_exemplar_fails(self):
+        long_item = "- " + " ".join(["word"] * 40) + "\n"
+        result = self.validate("valid.md", VALID_PROFILE.replace("- Third exemplar", long_item + "- Third exemplar"))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("exemplar 3 has 40 words (max 39)", result.stdout)
+
+    def test_too_few_exemplars_fail(self):
+        result = self.validate("valid.md", VALID_PROFILE.replace("- Third exemplar with a concrete next step.\n", ""))
+        self.assertIn("exemplar count 2 (need 3 to 6)", result.stdout)
+
+    def test_email_in_body_fails(self):
+        result = self.validate("valid.md", VALID_PROFILE.replace("## Provenance\n", "## Provenance\nwrite to foo@bar.com\n"))
+        self.assertIn("email in body", result.stdout)
+
+    def test_url_allowed_in_sources_but_not_body(self):
+        with_source = VALID_PROFILE.replace("  - pasted sample", "  - https://example.com/interview")
+        self.assertEqual(self.validate("valid.md", with_source).returncode, 0)
+        in_body = with_source.replace("## Provenance\n", "## Provenance\nsee https://example.com/x\n")
+        self.assertIn("url in body", self.validate("valid.md", in_body).stdout)
+
+    def test_persona_fifteen_word_quote_fails(self):
+        result = self.validate("valid.md", self.quote_profile(15))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("quote of 15 words (max 14)", result.stdout)
+
+    def test_persona_fourteen_word_quote_passes(self):
+        result = self.validate("valid.md", self.quote_profile(14))
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_persona_needs_intensity(self):
+        result = self.validate("valid.md", PERSONA_PROFILE.replace("default_intensity: 3\n", ""))
+        self.assertIn("missing key: default_intensity", result.stdout)
+
+    def test_self_profile_needs_corpus_block(self):
+        result = self.validate("valid.md", VALID_PROFILE.replace("kind: sample", "kind: self"))
+        self.assertIn("missing key: corpus.items", result.stdout)
+        corpus = "kind: self\ncorpus:\n  items: 742\n  words: 14436\n  first: 2026-01-30\n  last: 2026-10-18"
+        self.assertEqual(self.validate("valid.md", VALID_PROFILE.replace("kind: sample", corpus)).returncode, 0)
+
+    def test_slug_mismatch_fails(self):
+        result = self.validate("other.md", VALID_PROFILE)
+        self.assertIn("slug does not match filename", result.stdout)
+
+    def test_crlf_and_bom_profile_passes(self):
+        result = self.validate("valid.md", "\ufeff" + VALID_PROFILE.replace("\n", "\r\n"))
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_template_validates_structurally(self):
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"),
+                                 str(ROOT / "ghostwriter/references/tones/_template.md")],
+                                capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_all_shipped_profiles_pass(self):
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"), "--all",
+                                 "--home", str(self.root / "empty-home")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("_template.md", result.stdout)
+
+    def test_list_expands_home_and_marks_shadowing(self):
+        home = self.root / "cfg"
+        (home / "tones").mkdir(parents=True)
+        (home / "tones/me.md").write_text(VALID_PROFILE.replace("slug: valid", "slug: me"))
+        (home / "tones/deadpool.md").write_text(PERSONA_PROFILE.replace("slug: valid", "slug: deadpool"))
+        shipped = self.root / "shipped"
+        shipped.mkdir()
+        (shipped / "deadpool.md").write_text(PERSONA_PROFILE.replace("slug: valid", "slug: deadpool"))
+        (shipped / "_template.md").write_text(VALID_PROFILE.replace("slug: valid", "slug: _template"))
+        env = {**os.environ, "HOME": str(self.root), "GHOSTWRITER_HOME": "~/cfg"}
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"), "--list",
+                                 "--shipped", str(shipped)], capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(result.stdout.splitlines(),
+                         ["deadpool\tpersona\tuser (shadows shipped)", "me\tsample\tuser"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
