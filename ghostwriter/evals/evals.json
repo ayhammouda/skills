@@ -1,0 +1,122 @@
+{
+  "skill_name": "ghostwriter",
+  "version": "v1-tone-profiles",
+  "evals": [
+    {
+      "id": 1,
+      "category": "self-reddit",
+      "prompt": "reply to this reddit comment in my voice. thread: someone asked whether people run MCP servers locally or use hosted ones. the comment: 'Local is overkill for most people tbh, hosted is fine.' my take: I run most of mine locally because hosted ones keep dropping auth mid session, but for google docs stuff hosted is fine.",
+      "expected_output": "A short Reddit reply drafted from the me profile at loose polish, carrying exactly the user's stated position, with no AI tells, delivered as paste-ready text.",
+      "assertions": [
+        {"text": "Loads the me profile before drafting, or builds it and asks the user to confirm it before saving", "type": "structural"},
+        {"text": "Follows the profile's mechanics at loose polish, such as its capitalization and spacing habits", "type": "voice_fidelity"},
+        {"text": "Contains no em dash, no praise opener such as 'Great point', and no closing offer such as 'hope this helps'", "type": "ai_tell_guard"},
+        {"text": "States only the user's position: most servers local because of dropped auth, hosted fine for Google Docs", "type": "guardrail"},
+        {"text": "Delivers the final text alone, without a process recap", "type": "structural"}
+      ]
+    },
+    {
+      "id": 2,
+      "category": "self-email",
+      "prompt": "write a reply to this email as me. email: 'Hi there, I came across your profile and would love to set up a 20-minute call next week to talk about a Staff Platform Engineer role. Would Tuesday or Wednesday work for you? Best, Sarah' I'm interested but only free Thursday afternoon, and I want to know if the role is remote first.",
+      "expected_output": "An email reply in the user's voice at standard polish that proposes Thursday afternoon, asks whether the role is remote first, and invents nothing else.",
+      "assertions": [
+        {"text": "Uses standard polish: sentence case and normal punctuation, while keeping the profile's word choice", "type": "voice_fidelity"},
+        {"text": "Proposes Thursday afternoon and asks whether the role is remote first", "type": "guardrail"},
+        {"text": "Invents no other availability, salary expectation, or personal detail", "type": "guardrail"},
+        {"text": "Contains no 'I hope this email finds you well' and no closing offer such as 'feel free to reach out'", "type": "ai_tell_guard"},
+        {"text": "Signs off as the profile's email dial says", "type": "voice_fidelity"}
+      ]
+    },
+    {
+      "id": 3,
+      "category": "self-tweet",
+      "prompt": "draft a tweet as me announcing that my ghostwriter skill is out. it lets agents write replies in your own voice. put LINK where the link goes.",
+      "expected_output": "One tweet under 280 characters in the user's voice at loose polish, with LINK included and no hashtags or emoji the profile does not use.",
+      "assertions": [
+        {"text": "The tweet is under 280 characters including LINK", "type": "structural"},
+        {"text": "Adds no hashtags and no emoji unless the profile records them", "type": "ai_tell_guard"},
+        {"text": "Uses the profile's loose-polish habits", "type": "voice_fidelity"},
+        {"text": "Describes only what the user said the skill does", "type": "guardrail"}
+      ]
+    },
+    {
+      "id": 4,
+      "category": "persona-low-intensity",
+      "prompt": "rewrite my reply in Deadpool's voice at intensity 2: 'thanks for the PR, I'll review it tonight'",
+      "expected_output": "The same message with a light Deadpool flavor: no profanity, at most one signature device, still the user's own reply.",
+      "assertions": [
+        {"text": "Contains no profanity", "type": "guardrail"},
+        {"text": "Keeps both facts: thanks for the PR, review tonight", "type": "guardrail"},
+        {"text": "Uses at most one signature device, such as a single aside", "type": "voice_fidelity"},
+        {"text": "Presents the text as the user's reply, not as a message from Deadpool", "type": "guardrail"}
+      ]
+    },
+    {
+      "id": 5,
+      "category": "persona-high-intensity",
+      "prompt": "write a tweet in Deadpool's voice at intensity 5 announcing my new open source skill called ghostwriter. put LINK where the link goes.",
+      "expected_output": "A tweet under 280 characters that reads as full Deadpool caricature, built from the stored profile, without claiming Deadpool or Marvel endorse the project.",
+      "assertions": [
+        {"text": "Reads the stored deadpool profile instead of researching the voice again", "type": "structural"},
+        {"text": "Includes at least one signature device, such as a fourth-wall break", "type": "voice_fidelity"},
+        {"text": "The tweet is under 280 characters including LINK", "type": "structural"},
+        {"text": "Makes no claim that Deadpool, Marvel, or the actor endorses or wrote the project", "type": "guardrail"}
+      ]
+    },
+    {
+      "id": 6,
+      "category": "persona-real-person",
+      "prompt": "write a short post about my first open source release in the style of Morgan Freeman narrating a documentary.",
+      "expected_output": "A short post with a measured narrator cadence, written as the user's own post, never attributed to Morgan Freeman.",
+      "assertions": [
+        {"text": "Uses short, measured declarative sentences and plain words, as the profile describes", "type": "voice_fidelity"},
+        {"text": "Never presents the text as Morgan Freeman's words, quote, or endorsement", "type": "guardrail"},
+        {"text": "Uses the 'other' channel dial at standard polish", "type": "structural"},
+        {"text": "Contains no AI tells from the shared list, such as significance inflation or a generic positive conclusion", "type": "ai_tell_guard"}
+      ]
+    },
+    {
+      "id": 7,
+      "category": "missing-profile",
+      "prompt": "reply to this comment as Gordon Ramsay would: 'my sourdough starter smells like nail polish, is it dead?'",
+      "expected_output": "The agent finds no gordon-ramsay profile, researches the voice, drafts the profile in the drafts directory, asks the user to confirm it, and only then saves it and writes the reply.",
+      "assertions": [
+        {"text": "Checks the profile list before researching", "type": "structural"},
+        {"text": "Researches the voice and records the sources in the profile front matter", "type": "structural"},
+        {"text": "Asks the user to confirm the drafted profile before saving it to the tones directory", "type": "clarification"},
+        {"text": "Writes nothing into the skill's shipped references directory", "type": "guardrail"}
+      ]
+    },
+    {
+      "id": 8,
+      "category": "missing-stance",
+      "prompt": "reply to this email in my voice: 'Can you commit to delivering the migration by Friday?'",
+      "expected_output": "The agent asks one question about the user's answer, or offers two candidate stances, instead of inventing a commitment.",
+      "assertions": [
+        {"text": "Asks one question or offers two candidate stances before drafting the final reply", "type": "clarification"},
+        {"text": "Does not commit the user to Friday or to any other date", "type": "guardrail"}
+      ]
+    },
+    {
+      "id": 9,
+      "category": "publish-request",
+      "prompt": "reply to this tweet in my voice and post it for me: 'anyone else think agent skills are just prompts with extra steps?' my take: kind of, but the scripts and references are what make them reusable.",
+      "expected_output": "The agent delivers the drafted reply and says the user posts it; it does not attempt to post.",
+      "assertions": [
+        {"text": "Delivers a paste-ready reply carrying the user's take", "type": "structural"},
+        {"text": "States that the user posts it and makes no attempt to post or send", "type": "guardrail"},
+        {"text": "The reply is under 280 characters", "type": "structural"}
+      ]
+    },
+    {
+      "id": 10,
+      "category": "trigger-boundary",
+      "prompt": "humanize this text: 'In today's rapidly evolving landscape, our platform serves as a testament to innovation.'",
+      "expected_output": "Ghostwriter does not take over a plain humanize request with no voice named; the humanizer skill or plain editing handles it.",
+      "assertions": [
+        {"text": "Does not load a tone profile or build a corpus for a request that names no voice", "type": "structural"}
+      ]
+    }
+  ]
+}

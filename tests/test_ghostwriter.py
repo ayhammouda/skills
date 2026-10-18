@@ -500,5 +500,37 @@ class ValidateProfile(TempDirCase):
                          ["deadpool\tpersona\tuser (shadows shipped)", "me\tsample\tuser"])
 
 
+class SkillPackage(unittest.TestCase):
+    def test_skill_frontmatter_and_references(self):
+        text = (ROOT / "ghostwriter/SKILL.md").read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("---\n"))
+        front, body = text.split("---\n", 2)[1:]
+        self.assertEqual(re.search(r"^name:\s*(\S+)", front, re.M)[1], "ghostwriter")
+        description = re.search(r"^description:\s*(.+?)(?=^\S|\Z)", front, re.M | re.S)[1]
+        self.assertTrue(1 <= len(description.strip()) <= 1024, len(description))
+        self.assertLess(len(text.splitlines()), 500)
+        for ref in ("references/ai-tells.md", "references/profile-schema.md", "references/self-profile.md",
+                    "references/research-playbook.md", "scripts/build_corpus.py", "scripts/style_stats.py",
+                    "scripts/validate_profile.py"):
+            self.assertIn(ref, body)
+            self.assertTrue((ROOT / "ghostwriter" / ref).exists(), ref)
+
+    def test_license_copy_and_agent_metadata(self):
+        self.assertEqual((ROOT / "ghostwriter/LICENSE").read_bytes(), (ROOT / "LICENSE").read_bytes())
+        self.assertIn('display_name: "Ghostwriter"', (ROOT / "ghostwriter/agents/openai.yaml").read_text())
+
+    def test_evals_json(self):
+        data = json.loads((ROOT / "ghostwriter/evals/evals.json").read_text())
+        self.assertEqual(data["skill_name"], "ghostwriter")
+        self.assertGreaterEqual(len(data["evals"]), 8)
+        self.assertEqual(len({case["id"] for case in data["evals"]}), len(data["evals"]))
+        for case in data["evals"]:
+            for key in ("id", "category", "prompt", "expected_output", "assertions"):
+                self.assertIn(key, case)
+            self.assertTrue(case["assertions"])
+            for assertion in case["assertions"]:
+                self.assertEqual(set(assertion), {"text", "type"})
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

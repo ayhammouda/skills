@@ -51,7 +51,7 @@ Twelve `## ` sections, all present, in this order:
 - **standard:** sentence case and normal punctuation; the voice's words and rhythm stay.
 - **clean:** proofread prose for readers who expect it.
 
-Defaults: email `standard`, reddit `loose`, tweet `loose`, other `standard`. A request overrides them ("clean reddit reply"). Every level keeps spelling correct: authenticity comes from word choice and rhythm.
+The polish for a draft comes from the request, then the profile's channel dial, then the channel defaults in `SKILL.md`. Every level keeps spelling correct: authenticity comes from word choice and rhythm.
 
 ## Intensity
 
