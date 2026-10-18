@@ -7,7 +7,7 @@ Paths below use `<skill>` for this skill's directory and `<home>` for `$GHOSTWRI
 ## Self profile (`me`)
 
 1. **Check for an existing profile.** If `<home>/tones/me.md` exists and the person did not ask for a refresh, use it. Done.
-2. **Extract the corpus.**
+2. **Extract the corpus.** First tell the person, in one line, that this reads their Claude Code prompts under `~/.claude/`, processes them on this machine, and keeps the results in `<home>/corpus/`. Continue once they agree.
 
    ```bash
    python3 -I <skill>/scripts/build_corpus.py
@@ -21,7 +21,7 @@ Paths below use `<skill>` for this skill's directory and `<home>` for `$GHOSTWRI
    ```
 
 4. **Read the evidence:** `<home>/corpus/me.stats.json` and `<home>/corpus/me.sample.md`, both in full. These two files are the whole evidence base; the full corpus stays unread.
-5. **Draft `<home>/drafts/me.md`** from `references/tones/_template.md`:
+5. **Draft `<home>/drafts/me.md`** from `references/tones/_template.md`, then make it private with `chmod 700 <home>/drafts && chmod 600 <home>/drafts/me.md`:
    - Front matter: `kind: self`, `slug: me`, `confidence: medium`, and the `corpus` block (`items`, `words`, and the first and last dates, `YYYY-MM-DD`) from the stats.
    - **Rhythm and shape:** median and 90th-percentile reply length and sentence length, turned into length targets.
    - **Syntax and mechanics:** the rates for lowercase starts, missing end punctuation, space before `?` and `:`, contractions, emoji, and em dashes, each stated as a habit with its number.
@@ -37,7 +37,7 @@ Paths below use `<skill>` for this skill's directory and `<home>` for `$GHOSTWRI
 
    The result is `OK`; fix every `FAIL` line before moving on.
 7. **Confirm with the person.** Show eight traits, one line each, and six numbers: items, date span, median reply length in words, lowercase-start rate, space-before-question-mark rate, and missing-end-punctuation rate. Show traits, never corpus text. Ask what is wrong or missing.
-8. **Save.** Apply the corrections, mostly as Do / Don't lines. Move the file to `<home>/tones/me.md`, keeping the directory at mode 700 and the file at mode 600, and validate it again. The profile is saved once validation prints `OK` for the new path.
+8. **Save.** Apply the corrections, mostly as Do / Don't lines. Move the file to `<home>/tones/me.md`, run `chmod 700 <home>/tones && chmod 600 <home>/tones/me.md`, and validate it again. Validation fails on a profile other users can read. The profile is saved once validation prints `OK` for the new path.
 
 ## Sample profile
 

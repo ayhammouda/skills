@@ -4,7 +4,7 @@ A tone profile is one Markdown file that describes how one voice writes. Draftin
 
 ## Where profiles live
 
-- **User directory:** `$GHOSTWRITER_HOME/tones/<slug>.md`, default `~/.config/ghostwriter/tones/`. Every profile created on this machine goes here, including the person's own. Directories are mode 700 and files mode 600.
+- **User directory:** `$GHOSTWRITER_HOME/tones/<slug>.md`, default `~/.config/ghostwriter/tones/`. Every profile created on this machine goes here, including the person's own. Directories are mode 700 and files mode 600; validation fails on a profile here that other users can read.
 - **Shipped directory:** `references/tones/` inside the skill. It holds the examples and `_template.md`, and stays unchanged at runtime.
 - **Drafts:** a new or rebuilt profile is written to `$GHOSTWRITER_HOME/drafts/<slug>.md`, validated there, and moved to `tones/` once the person confirms it.
 - **Lookup:** user directory first, then shipped. A user profile shadows a shipped profile with the same slug.

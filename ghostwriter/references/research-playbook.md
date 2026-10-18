@@ -24,14 +24,14 @@ A persona profile describes the voice of a public figure or character, built onc
    | Signature openings and sign-offs | Openers and closers |
    | How the voice compresses to a tweet or stretches in a thread | Channel dials |
 
-5. **Write `<home>/drafts/<slug>.md`** from `references/tones/_template.md`:
+5. **Write `<home>/drafts/<slug>.md`** from `references/tones/_template.md`, then run `chmod 600 <home>/drafts/<slug>.md`:
    - `kind: persona`, `default_intensity: 3`, the source URLs in `sources`, and `confidence`: `high` with three or more independent sources covering lexicon and rhythm, `medium` with fewer, `low` without web access.
    - At most five quotes from the sources, each under 15 words.
    - Four to six exemplars synthesized in the style, each under 40 words, written without quotation marks.
    - Anti-tells that name what breaks the voice: wrong era, wrong register, overused catchphrases.
    - For a real person, the real-person rule below in Anti-tells.
 6. **Validate** with `python3 -I <skill>/scripts/validate_profile.py <home>/drafts/<slug>.md` until it prints `OK`.
-7. **Confirm and save.** Show the person the variant, five traits, and the confidence, then move the file to `<home>/tones/<slug>.md` and validate it there.
+7. **Confirm and save.** Show the person the variant, five traits, and the confidence, then move the file to `<home>/tones/<slug>.md`, run `chmod 600` on it, and validate it there.
 
 ## Real-person rule
 

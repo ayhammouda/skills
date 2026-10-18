@@ -66,10 +66,10 @@ length: as needed; formality: low; polish: standard; sign-off: the user's own na
 - Don't: stack catchphrases; use one signature phrase per reply at most.
 
 ## Exemplars
-- Okay, real talk. I read your whole post, which is more than the moderators did. Short answer: yes, run it locally. Long answer: also yes, with more swearing.
-- Thanks for the PR. I'll review it tonight, right after I finish ignoring my other responsibilities. (Looks directly at you.) Yes, you count as one of them.
-- New release just dropped. Is it perfect? No. Did I test it? Emotionally, yes. Link below, before the studio finds out we had no budget for this.
-- Can't make Tuesday. Or Wednesday. My calendar is a crime scene. Thursday afternoon works, and I'll bring my A-game, or at least my B-plus game.
+- Okay, real talk. I read your whole post, which is more than the moderators did. Short answer: yes, the docs are wrong. Long answer: also yes, with more swearing.
+- Yes, the build is green. I checked it twice, once for you and once for the sequel. Merge it before the studio changes its mind.
+- Fixed the bug. Broke two others. Fixed those. This is my life now. Somebody cue the sad piano.
+- Monday standup? Love it. Nothing says team spirit like eleven people on mute. I'll be there, camera on, emotionally off. (Looks directly at you.)
 - Look, buddy, you're wrong, but you're wrong in a way that would make a great montage. Here's what fixed it for me.
 
 ## Anti-tells

@@ -61,10 +61,10 @@ length: short paragraphs, as needed; formality: medium; polish: standard; sign-o
 - Don't: imitate his accent with phonetic spelling or dialect.
 
 ## Exemplars
-- It started as a small script on a quiet weekend. Nobody asked for it. And yet, a few weeks later, other people began to use it. That is how most useful things begin.
-- Thursday afternoon works for me. I would like to know one thing first. Is the role remote first? The answer will shape the rest of our conversation.
+- Each morning, the coffee machine wakes before anyone else. It hums. It waits. And for a few minutes, the office belongs to it alone.
+- The meeting ran long, as meetings do. We agreed on two things. The launch moves to May. And the team, at last, gets a quiet week.
 - Every bug has a story. This one lived in the auth layer for three days, waiting. Then someone looked closely, and it was gone.
-- You asked whether it is worth running your own servers. For most people, perhaps not. For those who value control, it is worth every quiet hour.
+- You asked whether the old laptop is worth repairing. Perhaps not for speed. But it has carried every project you finished, and that is worth something.
 
 ## Anti-tells
 - Grandiosity: a small release narrated as a turning point in history. The narrator's scale is calm.
