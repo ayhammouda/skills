@@ -287,6 +287,33 @@ class BuildCorpus(TempDirCase):
                                                 "make the footer logo bigger please"]))
 
 
+    def test_huge_assistant_lines_are_not_parsed(self):
+        claude = self.root / "claude-huge"
+        # Truncated JSON: if the line were parsed it would count as malformed.
+        huge = '{"type":"assistant","message":{"role":"assistant","content":"' + "x" * 3_000_000
+        write_jsonl(claude / "projects/-x-p/s.jsonl", [huge, user("keep this typed prompt please")])
+        out = self.root / "out-huge"
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "build_corpus.py"),
+                                 "--claude-dir", str(claude), "--out-dir", str(out)],
+                                capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        summary = json.loads(result.stdout)
+        self.assertEqual(summary["skipped"]["malformed"], 0)
+        self.assertEqual(summary["transcript_records"], 1)
+        texts = [json.loads(line)["text"] for line in (out / "me.corpus.jsonl").read_text().splitlines()]
+        self.assertEqual(texts, ["keep this typed prompt please"])
+
+    def test_both_spellings_of_the_user_type_key_are_read(self):
+        mod = load("build_corpus")
+        path = self.root / "spellings.jsonl"
+        path.write_text('{"type":"user","message":{"role":"user","content":"compact key prompt here"}}\n'
+                        '{"type": "user", "message": {"role": "user", "content": "spaced key prompt here"}}\n'
+                        '{"type":"assistant","message":{"role":"assistant","content":"model words"}}\n')
+        records = list(mod._read_json_lines(path, mod.Counter(), mod.USER_NEEDLES))
+        self.assertEqual([r["message"]["content"] for r in records],
+                         ["compact key prompt here", "spaced key prompt here"])
+
+
 class CleanText(unittest.TestCase):
     def setUp(self):
         self.mod = load("build_corpus")

@@ -86,6 +86,9 @@ PHONE_RE = re.compile(r"\+?\d(?:[ .]?\d){8,14}")
 
 DROP_REASONS = ("slash", "short", "long", "markup", "duplicate", "skipped_record", "before_since")
 SKIP_REASONS = ("malformed", "sidechain", "meta", "compact", "sdk", "origin")
+# Transcript lines are parsed only when they can be user records; assistant lines can run to
+# megabytes of tool input and are never needed.
+USER_NEEDLES = ('"type":"user"', '"type": "user"')
 
 
 @dataclass
@@ -159,7 +162,8 @@ def _iso_from_string(value) -> str | None:
     return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _read_json_lines(path: Path, counts: Counter):
+def _read_json_lines(path: Path, counts: Counter, needles: tuple[str, ...] = ()):
+    """Yield the JSON objects in path; with needles, parse only lines that contain one of them."""
     try:
         handle = path.open(encoding="utf-8", errors="replace")
     except OSError:
@@ -167,6 +171,8 @@ def _read_json_lines(path: Path, counts: Counter):
     with handle:
         for line in handle:
             if not line.strip():
+                continue
+            if needles and not any(needle in line for needle in needles):
                 continue
             try:
                 record = json.loads(line)
@@ -214,7 +220,7 @@ def iter_transcripts(projects_dir: Path, counts: Counter | None = None) -> Itera
     """Yield typed user turns from session transcripts one level under projects_dir."""
     counts = Counter() if counts is None else counts
     for path in sorted(projects_dir.glob("*/*.jsonl")):
-        for record in _read_json_lines(path, counts):
+        for record in _read_json_lines(path, counts, USER_NEEDLES):
             if record.get("type") != "user":
                 continue
             message = record.get("message")
