@@ -349,12 +349,20 @@ def main(argv: list[str]) -> int:
     if args.from_file is not None and not args.from_file.is_file():
         print(f"error: {args.from_file} is not a readable file", file=sys.stderr)
         return 1
+    if args.from_file is not None and args.since:
+        print("error: --since cannot be combined with --from-file; sample paragraphs carry no date",
+              file=sys.stderr)
+        return 1
+    claude_dir = args.claude_dir.expanduser()
     out_dir = args.out_dir.expanduser() if args.out_dir else _default_home() / "corpus"
-    summary = build(args.claude_dir.expanduser(), out_dir, args.slug, args.since,
-                    args.min_words, args.max_words, args.from_file)
+    summary = build(claude_dir, out_dir, args.slug, args.since, args.min_words, args.max_words,
+                    args.from_file)
     print(json.dumps(summary))
     if summary["items"] == 0:
-        print("no items survived the filters; nothing written", file=sys.stderr)
+        if args.from_file is None and not (summary["history_rows"] or summary["transcript_records"]):
+            print(f"no Claude Code data under {claude_dir}; nothing written", file=sys.stderr)
+        else:
+            print("no items survived the filters; nothing written", file=sys.stderr)
         return 2
     return 0
 

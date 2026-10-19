@@ -206,6 +206,38 @@ class BuildCorpus(TempDirCase):
         self.assertEqual(result.returncode, 2)
         self.assertEqual(items, [])
         self.assertEqual(json.loads(result.stdout)["items"], 0)
+        self.assertIn("no items survived the filters", result.stderr)
+
+    def test_no_claude_data_names_the_directory(self):
+        empty = self.root / "no-claude"
+        empty.mkdir()
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "build_corpus.py"),
+                                 "--claude-dir", str(empty), "--out-dir", str(self.root / "out")],
+                                capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(json.loads(result.stdout)["items"], 0)
+        self.assertTrue(result.stderr.startswith(f"no Claude Code data under {empty}"), result.stderr)
+        self.assertNotIn("survived", result.stderr)
+
+    def test_from_file_with_nothing_kept_reports_filters(self):
+        sample = self.root / "sample.txt"
+        sample.write_text("one\n\ntwo\n")
+        result, items = self.run_build("--from-file", str(sample))
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(items, [])
+        self.assertIn("no items survived the filters", result.stderr)
+        self.assertNotIn("Claude Code data", result.stderr)
+
+    def test_from_file_rejects_since(self):
+        sample = self.root / "sample.txt"
+        sample.write_text("first paragraph of the sample text\n")
+        result, items = self.run_build("--from-file", str(sample), "--since", "2026-01-01")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(items, [])
+        self.assertEqual(len(result.stderr.splitlines()), 1)
+        self.assertIn("--since", result.stderr)
+        self.assertIn("--from-file", result.stderr)
 
     def test_skip_reasons_are_counted(self):
         result, _ = self.build_ok()
