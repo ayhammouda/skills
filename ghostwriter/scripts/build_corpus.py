@@ -77,7 +77,9 @@ EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 TOKEN_RE = re.compile(
     r"\b(?:sk-|ghp_|gho_|xox[abp]-|AKIA|AIza)[A-Za-z0-9_\-]{8,}"
     r"|(?<=Bearer\s)\S+"
-    r"|[A-Za-z0-9+/_=\-]{32,}"
+    # A run of 32+ key-like characters, tested once at its start. A run with a slash and no
+    # digit is a path such as references/research-playbook.md, not a key.
+    r"|(?<![A-Za-z0-9+/_=\-])(?:(?=[A-Za-z+/_=\-]*\d)|(?![A-Za-z0-9+_=\-]*/))[A-Za-z0-9+/_=\-]{32,}"
 )
 IP_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 PHONE_RE = re.compile(r"\+?\d(?:[ .]?\d){8,14}")

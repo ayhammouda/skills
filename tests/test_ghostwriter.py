@@ -279,6 +279,22 @@ class CleanText(unittest.TestCase):
                            "ghp_abcdefghijklmnopqrstuvwxyz0123456789 Bearer abc.def"),
             "call <PHONE> at <IP> token <TOKEN> Bearer <TOKEN>")
 
+    def test_scrub_leaves_long_paths_without_digits(self):
+        text = "see ghostwriter/references/research-playbook.md and tests/test_ghostwriter.py"
+        self.assertEqual(self.mod.scrub(text), text)
+
+    def test_scrub_replaces_long_runs_with_a_digit(self):
+        self.assertEqual(self.mod.scrub("key abcdefghijklmnopqrstuvwxyz0123456789ab ok"), "key <TOKEN> ok")
+        self.assertEqual(self.mod.scrub("aws wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"), "aws <TOKEN>")
+
+    def test_scrub_replaces_long_digit_free_runs_without_a_slash(self):
+        self.assertEqual(self.mod.scrub("key abcdefghijklmnopqrstuvwxyzabcdef ok"), "key <TOKEN> ok")
+        self.assertEqual(self.mod.scrub("see docs/design/ghostwriter-design-notes.md"),
+                         "see docs/design/ghostwriter-design-notes.md")
+
+    def test_token_pattern_matches_the_validator(self):
+        self.assertEqual(self.mod.TOKEN_RE.pattern, load("validate_profile").TOKEN_RE.pattern)
+
     def test_clean_text_keeps_user_words(self):
         self.assertEqual(self.mod.clean_text("Hello\r\n\r\nworld   again"), "Hello world again")
 
@@ -529,6 +545,16 @@ class ValidateProfile(TempDirCase):
     def test_email_in_body_fails(self):
         result = self.validate("valid.md", VALID_PROFILE.replace("## Provenance\n", "## Provenance\nwrite to foo@bar.com\n"))
         self.assertIn("email in body", result.stdout)
+
+    def test_repository_path_in_body_passes(self):
+        text = VALID_PROFILE.replace("## Provenance\n",
+                                     "## Provenance\nResearched per ghostwriter/references/research-playbook.md.\n")
+        result = self.validate("valid.md", text)
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_secret_like_run_in_body_fails(self):
+        text = VALID_PROFILE.replace("## Provenance\n", "## Provenance\nkey abcdefghijklmnopqrstuvwxyz0123456789ab\n")
+        self.assertIn("token in body", self.validate("valid.md", text).stdout)
 
     def test_url_allowed_in_sources_but_not_body(self):
         with_source = VALID_PROFILE.replace("  - pasted sample", "  - https://example.com/interview")
