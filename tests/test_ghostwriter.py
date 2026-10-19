@@ -192,6 +192,24 @@ class BuildCorpus(TempDirCase):
         self.assertEqual(oct((self.root / "out").stat().st_mode & 0o777), "0o700")
         self.assertEqual(oct((self.root / "out/me.corpus.jsonl").stat().st_mode & 0o777), "0o600")
 
+    def test_default_out_dir_expands_ghostwriter_home(self):
+        env = {**os.environ, "HOME": str(self.root), "GHOSTWRITER_HOME": "~/cfg"}
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "build_corpus.py"),
+                                 "--claude-dir", str(self.claude)],
+                                capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        corpus = self.root / "cfg/corpus/me.corpus.jsonl"
+        self.assertEqual(json.loads(result.stdout)["out"], str(corpus))
+        self.assertEqual(oct(corpus.stat().st_mode & 0o777), "0o600")
+        for directory in (self.root / "cfg", self.root / "cfg/corpus"):
+            self.assertEqual(oct(directory.stat().st_mode & 0o777), "0o700", directory)
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "style_stats.py"),
+                                 "~/cfg/corpus/me.corpus.jsonl"],
+                                capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for name in ("me.stats.json", "me.sample.md"):
+            self.assertEqual(oct((corpus.parent / name).stat().st_mode & 0o777), "0o600", name)
+
     def test_from_file_paragraphs(self):
         sample = self.root / "sample.txt"
         sample.write_text("first paragraph of the sample text\n\nsecond paragraph here too\n")
