@@ -10,7 +10,7 @@ shipped one with the same slug.
 Standard library only. Run as:
   python3 -I validate_profile.py PATH [PATH ...]   validate files
   python3 -I validate_profile.py --all             validate every profile
-  python3 -I validate_profile.py --list            list slug, kind, location
+  python3 -I validate_profile.py --list            list slug, kind, location, path
 """
 
 from __future__ import annotations
@@ -268,15 +268,16 @@ def _kind(path: Path) -> str:
     return str(data.get("kind", "?"))
 
 
-def list_profiles(home: Path, shipped: Path) -> list[tuple[str, str, str]]:
+def list_profiles(home: Path, shipped: Path) -> list[tuple[str, str, str, str]]:
+    """Return (slug, kind, location, path) per profile, the user directory shadowing shipped."""
     user, bundled = _profiles(home / "tones"), _profiles(shipped)
     rows = []
     for slug in sorted(set(user) | set(bundled)):
         if slug in user:
             location = "user (shadows shipped)" if slug in bundled else "user"
-            rows.append((slug, _kind(user[slug]), location))
+            rows.append((slug, _kind(user[slug]), location, str(user[slug])))
         else:
-            rows.append((slug, _kind(bundled[slug]), "shipped"))
+            rows.append((slug, _kind(bundled[slug]), "shipped", str(bundled[slug])))
     return rows
 
 
@@ -289,7 +290,8 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("paths", nargs="*", type=Path)
     parser.add_argument("--all", action="store_true", help="validate every user and shipped profile")
-    parser.add_argument("--list", action="store_true", help="list slug, kind, and location")
+    parser.add_argument("--list", action="store_true",
+                        help="list slug, kind, location, and path, tab-separated")
     parser.add_argument("--home", type=Path, default=None,
                         help="default: $GHOSTWRITER_HOME or ~/.config/ghostwriter")
     parser.add_argument("--shipped", type=Path, default=Path(__file__).resolve().parent.parent / "references/tones")

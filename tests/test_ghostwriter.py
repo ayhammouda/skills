@@ -645,12 +645,16 @@ class ValidateProfile(TempDirCase):
         shipped = self.root / "shipped"
         shipped.mkdir()
         (shipped / "deadpool.md").write_text(PERSONA_PROFILE.replace("slug: valid", "slug: deadpool"))
+        (shipped / "narrator.md").write_text(PERSONA_PROFILE.replace("slug: valid", "slug: narrator"))
         (shipped / "_template.md").write_text(VALID_PROFILE.replace("slug: valid", "slug: _template"))
         env = {**os.environ, "HOME": str(self.root), "GHOSTWRITER_HOME": "~/cfg"}
         result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"), "--list",
                                  "--shipped", str(shipped)], capture_output=True, text=True, env=env, timeout=60)
-        self.assertEqual(result.stdout.splitlines(),
-                         ["deadpool\tpersona\tuser (shadows shipped)", "me\tsample\tuser"])
+        self.assertEqual(result.stdout.splitlines(), [
+            f"deadpool\tpersona\tuser (shadows shipped)\t{home / 'tones/deadpool.md'}",
+            f"me\tsample\tuser\t{home / 'tones/me.md'}",
+            f"narrator\tpersona\tshipped\t{shipped / 'narrator.md'}",
+        ])
 
 
 class SkillPackage(unittest.TestCase):
