@@ -391,6 +391,28 @@ class StyleStats(TempDirCase):
         self.assertIsNone(s)
         self.assertFalse((self.root / "me.sample.md").exists())
 
+    def test_out_paths_in_missing_directories_are_created_privately(self):
+        stats_out = self.root / "new/deep/me.stats.json"
+        sample_out = self.root / "new/me.sample.md"
+        result, _ = self.run_stats(SIX_ITEMS, "--stats-out", str(stats_out), "--sample-out", str(sample_out))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path in (stats_out, sample_out):
+            self.assertEqual(oct(path.stat().st_mode & 0o777), "0o600", path)
+        for path in (self.root / "new", self.root / "new/deep"):
+            self.assertEqual(oct(path.stat().st_mode & 0o777), "0o700", path)
+        self.assertEqual(json.loads(result.stdout)["stats"], str(stats_out))
+
+    def test_out_path_blocked_by_a_file_fails_with_one_line(self):
+        blocker = self.root / "blocker"
+        blocker.write_text("not a directory")
+        result, _ = self.run_stats(SIX_ITEMS, "--stats-out", str(blocker / "me.stats.json"))
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertEqual(len(result.stderr.splitlines()), 1)
+        self.assertTrue(result.stderr.startswith("error: "), result.stderr)
+        self.assertIn(str(blocker), result.stderr)
+
 
 VALID_PROFILE = """---
 name: Valid Example
