@@ -532,6 +532,28 @@ class ValidateProfile(TempDirCase):
         self.assertIn("missing key: confidence", result.stdout)
         self.assertIn("invalid kind: robot", result.stdout)
 
+    def test_inline_comments_in_front_matter_are_ignored(self):
+        text = (VALID_PROFILE.replace("version: 1\n", "version: 1  # bump on every edit\n")
+                .replace("confidence: low\n", "confidence: low # from a short sample\n")
+                .replace("channels: [email, reddit, tweet, other]\n",
+                         "channels: [email, reddit, tweet, other] # all four\n")
+                .replace("  - pasted sample\n", "  - pasted sample # one message\n"))
+        result = self.validate("valid.md", text)
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_front_matter_comments_respect_quotes(self):
+        mod = load("validate_profile")
+        data, _ = mod.parse_front_matter('---\nname: "C# dev" # alias\nnote: # nothing yet\nversion: 2 # bumped\n'
+                                         "sources: # listed below\n  - sample # typed\n---\nbody")
+        self.assertEqual(data, {"name": "C# dev", "note": None, "version": 2, "sources": ["sample"]})
+
+    def test_quoted_version_is_reported_with_its_quotes(self):
+        result = self.validate("valid.md", VALID_PROFILE.replace("version: 1\n", 'version: "1"\n'))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('invalid version: "1"', result.stdout)
+        result = self.validate("valid.md", VALID_PROFILE.replace("version: 1\n", "version: one\n"))
+        self.assertIn("invalid version: one", result.stdout)
+
     def test_forty_word_exemplar_fails(self):
         long_item = "- " + " ".join(["word"] * 40) + "\n"
         result = self.validate("valid.md", VALID_PROFILE.replace("- Third exemplar", long_item + "- Third exemplar"))

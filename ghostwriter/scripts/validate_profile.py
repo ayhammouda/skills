@@ -52,10 +52,39 @@ TOKEN_RE = re.compile(
 )
 
 
+COMMENT_RE = re.compile(r"(?:^|\s+)#.*$")   # YAML: a comment starts the value or follows whitespace
+QUOTES = ('"', "'")
+
+
+class Quoted(str):
+    """A front-matter value written in quotes; messages show it with them."""
+
+    def __new__(cls, value: str, quote: str):
+        self = super().__new__(cls, value)
+        self.quote = quote
+        return self
+
+
+def _shown(value) -> str:
+    return f"{value.quote}{value}{value.quote}" if isinstance(value, Quoted) else str(value)
+
+
+def _uncomment(value: str) -> str:
+    """Drop a trailing comment, leaving a '#' inside a quoted value alone."""
+    if value[:1] in QUOTES:
+        closing = value.find(value[0], 1)
+        if closing > 0:
+            return value[:closing + 1] + COMMENT_RE.sub("", value[closing + 1:])
+    return COMMENT_RE.sub("", value)
+
+
 def _scalar(raw: str):
-    value = raw.strip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-        return value[1:-1]
+    """Parse one value: None when empty, a quoted or plain string, an int, or an inline list."""
+    value = _uncomment(raw.strip())
+    if not value:
+        return None
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in QUOTES:
+        return Quoted(value[1:-1], value[0])
     if value.startswith("[") and value.endswith("]"):
         inner = value[1:-1].strip()
         return [_scalar(part) for part in inner.split(",")] if inner else []
@@ -83,7 +112,7 @@ def parse_front_matter(text: str) -> tuple[dict, str]:
                 raise ValueError(f"line {number} is not 'key: value'")
             key, _, raw = line.partition(":")
             key = key.strip()
-            data[key] = _scalar(raw) if raw.strip() else None
+            data[key] = _scalar(raw)
             continue
         if key is None:
             raise ValueError(f"line {number} is indented without a parent key")
@@ -130,9 +159,9 @@ def _check_keys(data: dict, stem: str, template: bool) -> list[str]:
                 and not (key == "sources" and data.get(key) == [])]
     for key, allowed in (("kind", KINDS), ("confidence", CONFIDENCE)):
         if key in data and data[key] not in allowed:
-            problems.append(f"invalid {key}: {data[key]}")
+            problems.append(f"invalid {key}: {_shown(data[key])}")
     if "version" in data and not (isinstance(data["version"], int) and data["version"] > 0):
-        problems.append(f"invalid version: {data['version']}")
+        problems.append(f"invalid version: {_shown(data['version'])}")
     for key in ("created", "updated"):
         value = data.get(key)
         if value is not None:
@@ -141,7 +170,7 @@ def _check_keys(data: dict, stem: str, template: bool) -> list[str]:
             except ValueError:
                 valid = False
             if not valid:
-                problems.append(f"invalid {key}: {value}")
+                problems.append(f"invalid {key}: {_shown(value)}")
     for key in ("sources", "channels"):
         if data.get(key) is not None and not isinstance(data[key], list):
             problems.append(f"invalid {key}: expected a list")
@@ -150,13 +179,13 @@ def _check_keys(data: dict, stem: str, template: bool) -> list[str]:
         if str(slug) != stem:
             problems.append("slug does not match filename")
         elif not template and not SLUG_RE.match(str(slug)):
-            problems.append(f"invalid slug: {slug}")
+            problems.append(f"invalid slug: {_shown(slug)}")
     if data.get("kind") == "persona":
         intensity = data.get("default_intensity")
         if intensity is None:
             problems.append("missing key: default_intensity")
         elif not (isinstance(intensity, int) and 1 <= intensity <= 5):
-            problems.append(f"invalid default_intensity: {intensity}")
+            problems.append(f"invalid default_intensity: {_shown(intensity)}")
     if data.get("kind") == "self":
         corpus = data.get("corpus") if isinstance(data.get("corpus"), dict) else {}
         problems += [f"missing key: corpus.{key}" for key in CORPUS_KEYS if corpus.get(key) in (None, "")]
