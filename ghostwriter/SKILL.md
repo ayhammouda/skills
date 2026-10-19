@@ -35,7 +35,7 @@ Draft and rewrite messages in a stored voice: the person's own, built from their
    - Intensity, for personas: the request's number from 1 to 5, else the profile's `default_intensity`.
 
    Done when tone, channel, polish, and intensity are known.
-2. **Load the profile.** Run `scripts/validate_profile.py --list` and read the matching file in full. When none exists, build it first, then return here with the original request:
+2. **Load the profile.** Run `python3 -I <skill>/scripts/validate_profile.py --list` and read the matching file in full. When none exists, build it first, then return here with the original request:
    - `me`, or "from my history": `references/self-profile.md`, which runs `scripts/build_corpus.py` and `scripts/style_stats.py`.
    - A named persona: `references/research-playbook.md`.
    - Text the person supplies: the sample flow in `references/self-profile.md`.
