@@ -229,6 +229,17 @@ class BuildCorpus(TempDirCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(oct(shared.stat().st_mode & 0o777), "0o755")
 
+    def test_unwritable_out_dir_reports_one_error_line(self):
+        blocker = self.root / "blocker"
+        blocker.write_text("a regular file where a directory is needed\n")
+        result, items = self.run_build("--out-dir", str(blocker / "corpus"))
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(items, [])
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertTrue(result.stderr.startswith("error: cannot write"), result.stderr)
+        self.assertEqual(result.stderr.count("\n"), 1)
+
     def test_from_file_paragraphs(self):
         sample = self.root / "sample.txt"
         sample.write_text("first paragraph of the sample text\n\nsecond paragraph here too\n")

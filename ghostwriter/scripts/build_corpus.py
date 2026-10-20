@@ -91,6 +91,10 @@ SKIP_REASONS = ("malformed", "sidechain", "meta", "compact", "sdk", "origin")
 USER_NEEDLES = ('"type":"user"', '"type": "user"')
 
 
+class WriteError(Exception):
+    """The corpus could not be written; the message names the path and the reason."""
+
+
 @dataclass
 class Item:
     text: str
@@ -324,7 +328,10 @@ def build(claude_dir: Path, out_dir: Path, slug: str, since: str | None, min_wor
     dropped["skipped_record"] = counts["skipped_record"]
     out_path = out_dir / f"{slug}.corpus.jsonl"
     if kept:
-        _write_private(out_path, kept, tighten_dir=tighten_dir)
+        try:
+            _write_private(out_path, kept, tighten_dir=tighten_dir)
+        except OSError as error:
+            raise WriteError(f"cannot write {out_path}: {error.strerror or error}") from error
     return {"items": len(kept), "history_rows": counts["history_rows"],
             "transcript_records": counts["transcript_records"], "dropped": dropped,
             "skipped": {reason: counts[f"skip_{reason}"] for reason in SKIP_REASONS},
@@ -372,8 +379,12 @@ def main(argv: list[str]) -> int:
         return 1
     claude_dir = args.claude_dir.expanduser()
     out_dir = args.out_dir.expanduser() if args.out_dir else _default_home() / "corpus"
-    summary = build(claude_dir, out_dir, args.slug, args.since, args.min_words, args.max_words,
-                    args.from_file, tighten_dir=args.out_dir is None)
+    try:
+        summary = build(claude_dir, out_dir, args.slug, args.since, args.min_words, args.max_words,
+                        args.from_file, tighten_dir=args.out_dir is None)
+    except WriteError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
     print(json.dumps(summary))
     if summary["items"] == 0:
         if args.from_file is None and not (summary["history_rows"] or summary["transcript_records"]):
