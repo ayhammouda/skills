@@ -35,7 +35,7 @@ The package includes [example outputs](mentor/examples), a [JSON output schema](
 - **Personas:** a named voice such as a character or public figure is researched once and saved as a profile, so later drafts reuse it without new research. `deadpool` and `morgan-freeman` ship as examples.
 - **Samples:** text you supply, such as sent emails, can become its own profile.
 
-Profiles you create, and the corpus behind your own, live in `~/.config/ghostwriter/` (or `$GHOSTWRITER_HOME`) with owner-only permissions, outside this repository and the installed skill. **Ghostwriter produces drafts only; you send or post them yourself.** It writes as you: a persona shapes the style, never the signature. Its AI-pattern list is condensed from [blader/humanizer](https://github.com/blader/humanizer) (MIT) and Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
+Profiles you create, and the corpus behind your own, live in `~/.config/ghostwriter/` (or `$GHOSTWRITER_HOME`, which must point outside any repository checkout) with owner-only permissions on macOS and Linux, outside this repository and the installed skill. Windows ignores these permission bits; keep the directory on a drive only you can read. **Ghostwriter produces drafts only; you send or post them yourself.** It writes as you: a persona shapes the style, never the signature. Its AI-pattern list is condensed from [blader/humanizer](https://github.com/blader/humanizer) (MIT) and Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
 
 ## Requirements
 
@@ -199,7 +199,7 @@ python3 -B tests/test_ghostwriter.py
 python3 -I ghostwriter/scripts/validate_profile.py --all
 ```
 
-The tests run the corpus, stylometrics, and validation scripts against synthetic fixtures; they never read your own Claude Code data. The validator checks every shipped profile and every profile in your `~/.config/ghostwriter/tones/`. Neither proves that a model writes convincingly in a voice.
+The tests run the corpus, stylometrics, and validation scripts against synthetic fixtures; they never read your own Claude Code data. The validator checks every shipped profile and every profile in your configured profile directory: `$GHOSTWRITER_HOME/tones/` when the variable is set, otherwise `~/.config/ghostwriter/tones/`; pass `--home DIR` to check another directory. Neither proves that a model writes convincingly in a voice.
 
 For Mentor, with Node.js 18 or later and no dependency installation:
 

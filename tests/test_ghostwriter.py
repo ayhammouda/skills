@@ -210,6 +210,25 @@ class BuildCorpus(TempDirCase):
         for name in ("me.stats.json", "me.sample.md"):
             self.assertEqual(oct((corpus.parent / name).stat().st_mode & 0o777), "0o600", name)
 
+    @unittest.skipIf(os.name == "nt", "POSIX permissions")
+    def test_existing_default_corpus_dir_is_tightened_but_explicit_out_dir_is_not(self):
+        cfg = self.root / "cfg/corpus"
+        cfg.mkdir(parents=True)
+        os.chmod(cfg, 0o755)
+        env = {**os.environ, "HOME": str(self.root), "GHOSTWRITER_HOME": "~/cfg"}
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "build_corpus.py"),
+                                 "--claude-dir", str(self.claude)], capture_output=True, text=True,
+                                timeout=60, env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((cfg / "me.corpus.jsonl").exists())
+        self.assertEqual(oct(cfg.stat().st_mode & 0o777), "0o700")
+        shared = self.root / "shared"
+        shared.mkdir()
+        os.chmod(shared, 0o755)
+        result, _ = self.run_build("--out-dir", str(shared))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(oct(shared.stat().st_mode & 0o777), "0o755")
+
     def test_from_file_paragraphs(self):
         sample = self.root / "sample.txt"
         sample.write_text("first paragraph of the sample text\n\nsecond paragraph here too\n")
@@ -660,6 +679,7 @@ class ValidateProfile(TempDirCase):
     def test_user_profile_with_open_permissions_fails(self):
         home = self.root / "cfg"
         (home / "tones").mkdir(parents=True)
+        os.chmod(home / "tones", 0o700)
         path = home / "tones/valid.md"
         path.write_text(VALID_PROFILE)
         os.chmod(path, 0o644)
@@ -669,6 +689,35 @@ class ValidateProfile(TempDirCase):
         self.assertIn("mode 644, expected 600", result.stdout)
         os.chmod(path, 0o600)
         self.assertEqual(subprocess.run(command, capture_output=True, text=True, timeout=60).returncode, 0)
+
+    @unittest.skipIf(os.name == "nt", "POSIX permissions")
+    def test_open_tones_directory_fails(self):
+        home = self.root / "cfg"
+        (home / "tones").mkdir(parents=True)
+        os.chmod(home / "tones", 0o755)
+        path = home / "tones/valid.md"
+        path.write_text(VALID_PROFILE)
+        os.chmod(path, 0o600)
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"), str(path),
+                                 "--home", str(home)], capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("directory mode 755, expected 700", result.stdout)
+
+    @unittest.skipIf(os.name == "nt", "POSIX permissions")
+    def test_symlinked_user_profile_fails(self):
+        home = self.root / "cfg"
+        (home / "tones").mkdir(parents=True)
+        os.chmod(home / "tones", 0o700)
+        outside = self.root / "elsewhere/valid.md"
+        outside.parent.mkdir()
+        outside.write_text(VALID_PROFILE)
+        os.chmod(outside, 0o644)
+        (home / "tones/valid.md").symlink_to(outside)
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"), "--all",
+                                 "--home", str(home), "--shipped", str(self.root / "no-shipped")],
+                                capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("symlink in user directory", result.stdout)
 
     def test_template_validates_structurally(self):
         result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"),

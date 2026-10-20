@@ -41,7 +41,7 @@ Paths below use `<skill>` for this skill's directory and `<home>` for `$GHOSTWRI
 
 ## Sample profile
 
-The person supplies text they wrote, such as sent emails or old posts, as a file path or pasted text. Save pasted text to `<home>/corpus/<slug>.txt` first.
+The person supplies text they wrote, such as sent emails or old posts, as a file path or pasted text. Pasted text is saved to `<home>/corpus/<slug>.txt` first: create the file private before any content lands in it, with `mkdir -p <home>/corpus && chmod 700 <home> <home>/corpus && install -m 600 /dev/null <home>/corpus/<slug>.txt`, then write the text into that file.
 
 ```bash
 python3 -I <skill>/scripts/build_corpus.py --from-file PATH --slug <slug>
@@ -60,4 +60,4 @@ Feedback such as "I would never say that" or "shorter, more direct" becomes one 
 
 ## Delete
 
-Move `<home>/tones/<slug>.md` to `<home>/trash/<slug>-<date>.md` after the person confirms, and offer the same for `<home>/corpus/<slug>.*`. The person empties `<home>/trash/` themselves.
+After the person confirms, create the trash directory with `mkdir -p <home>/trash && chmod 700 <home>/trash`, move `<home>/tones/<slug>.md` to `<home>/trash/<slug>-<date>.md`, and offer the same for `<home>/corpus/<slug>.*`. The person empties `<home>/trash/` themselves.

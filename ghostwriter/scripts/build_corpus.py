@@ -254,7 +254,13 @@ def iter_sample(path: Path) -> Iterator[Item]:
             yield Item(paragraph, "sample", None, None)
 
 
-def _ensure_private_dir(path: Path) -> None:
+def _ensure_private_dir(path: Path, tighten_existing: bool = False) -> None:
+    """Create path and its missing parents with mode 0o700.
+
+    An existing leaf directory keeps its mode unless tighten_existing is set,
+    which the default location under the Ghostwriter home opts into; a
+    user-chosen --out-dir is never re-permissioned.
+    """
     missing = []
     current = path
     while not current.exists():
@@ -263,10 +269,13 @@ def _ensure_private_dir(path: Path) -> None:
     for directory in reversed(missing):
         directory.mkdir(mode=0o700)
         os.chmod(directory, 0o700)
+    if not missing and tighten_existing and os.name != "nt":
+        if path.stat().st_mode & 0o077:
+            os.chmod(path, 0o700)
 
 
-def _write_private(path: Path, items: list[Item]) -> None:
-    _ensure_private_dir(path.parent)
+def _write_private(path: Path, items: list[Item], tighten_dir: bool = False) -> None:
+    _ensure_private_dir(path.parent, tighten_existing=tighten_dir)
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -280,7 +289,7 @@ def _write_private(path: Path, items: list[Item]) -> None:
 
 
 def build(claude_dir: Path, out_dir: Path, slug: str, since: str | None, min_words: int,
-          max_words: int, from_file: Path | None) -> dict:
+          max_words: int, from_file: Path | None, tighten_dir: bool = False) -> dict:
     counts = Counter()
     if from_file is not None:
         source = iter_sample(from_file)
@@ -315,7 +324,7 @@ def build(claude_dir: Path, out_dir: Path, slug: str, since: str | None, min_wor
     dropped["skipped_record"] = counts["skipped_record"]
     out_path = out_dir / f"{slug}.corpus.jsonl"
     if kept:
-        _write_private(out_path, kept)
+        _write_private(out_path, kept, tighten_dir=tighten_dir)
     return {"items": len(kept), "history_rows": counts["history_rows"],
             "transcript_records": counts["transcript_records"], "dropped": dropped,
             "skipped": {reason: counts[f"skip_{reason}"] for reason in SKIP_REASONS},
@@ -364,7 +373,7 @@ def main(argv: list[str]) -> int:
     claude_dir = args.claude_dir.expanduser()
     out_dir = args.out_dir.expanduser() if args.out_dir else _default_home() / "corpus"
     summary = build(claude_dir, out_dir, args.slug, args.since, args.min_words, args.max_words,
-                    args.from_file)
+                    args.from_file, tighten_dir=args.out_dir is None)
     print(json.dumps(summary))
     if summary["items"] == 0:
         if args.from_file is None and not (summary["history_rows"] or summary["transcript_records"]):

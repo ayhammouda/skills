@@ -226,17 +226,29 @@ def _check_body(body: str, kind, template: bool) -> list[str]:
 
 
 def _permission_problems(path: Path, home: Path | None) -> list[str]:
-    """Profiles under the user directory must be private to their owner (POSIX only)."""
+    """Profiles under the user directory must be regular files private to their owner (POSIX only).
+
+    Paths are compared without following symlinks, so a link inside the user
+    directory is reported instead of silently checking (or skipping) its target.
+    """
     if home is None or os.name == "nt":
         return []
-    try:
-        resolved, root = path.resolve(), home.resolve()
-        if root not in resolved.parents:
-            return []
-        mode = resolved.stat().st_mode & 0o777
-    except OSError:
+    absolute, root = Path(os.path.abspath(path)), Path(os.path.abspath(home))
+    if root not in absolute.parents:
         return []
-    return [f"mode {mode:o}, expected 600 (chmod 600 {path})"] if mode & 0o077 else []
+    problems = []
+    try:
+        if absolute.is_symlink():
+            return [f"symlink in user directory, expected a regular file: {path}"]
+        directory_mode = absolute.parent.stat().st_mode & 0o777
+        if directory_mode & 0o077:
+            problems.append(f"directory mode {directory_mode:o}, expected 700 (chmod 700 {absolute.parent})")
+        mode = absolute.stat().st_mode & 0o777
+        if mode & 0o077:
+            problems.append(f"mode {mode:o}, expected 600 (chmod 600 {path})")
+    except OSError:
+        return problems
+    return problems
 
 
 def validate(path: Path, home: Path | None = None) -> list[str]:
