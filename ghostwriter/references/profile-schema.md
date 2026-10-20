@@ -10,7 +10,7 @@ A tone profile is one Markdown file that describes how one voice writes. Draftin
 - **Lookup:** user directory first, then shipped. A user profile shadows a shipped profile with the same slug.
 - **Slugs:** lowercase letters, digits, and hyphens. The person's own voice is `me`.
 
-List what exists with `python3 -I scripts/validate_profile.py --list`.
+List what exists with `python3 -I <skill>/scripts/validate_profile.py --list`.
 
 ## Front matter
 
@@ -69,4 +69,4 @@ Persona profiles carry `default_intensity`, and a request may set another value 
 - Every edit increases `version` and sets `updated` to today.
 - Tuning appends one Do / Don't line per piece of feedback.
 - Tuning a shipped profile first copies it to the user directory; the shipped file stays unchanged.
-- Validate after every write: `python3 -I scripts/validate_profile.py <path>`.
+- Validate after every write: `python3 -I <skill>/scripts/validate_profile.py <path>`.

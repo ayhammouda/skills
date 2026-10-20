@@ -192,6 +192,24 @@ class BuildCorpus(TempDirCase):
         self.assertEqual(oct((self.root / "out").stat().st_mode & 0o777), "0o700")
         self.assertEqual(oct((self.root / "out/me.corpus.jsonl").stat().st_mode & 0o777), "0o600")
 
+    def test_default_out_dir_expands_ghostwriter_home(self):
+        env = {**os.environ, "HOME": str(self.root), "GHOSTWRITER_HOME": "~/cfg"}
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "build_corpus.py"),
+                                 "--claude-dir", str(self.claude)],
+                                capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        corpus = self.root / "cfg/corpus/me.corpus.jsonl"
+        self.assertEqual(json.loads(result.stdout)["out"], str(corpus))
+        self.assertEqual(oct(corpus.stat().st_mode & 0o777), "0o600")
+        for directory in (self.root / "cfg", self.root / "cfg/corpus"):
+            self.assertEqual(oct(directory.stat().st_mode & 0o777), "0o700", directory)
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "style_stats.py"),
+                                 "~/cfg/corpus/me.corpus.jsonl"],
+                                capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for name in ("me.stats.json", "me.sample.md"):
+            self.assertEqual(oct((corpus.parent / name).stat().st_mode & 0o777), "0o600", name)
+
     @unittest.skipIf(os.name == "nt", "POSIX permissions")
     def test_existing_default_corpus_dir_is_tightened_but_explicit_out_dir_is_not(self):
         cfg = self.root / "cfg/corpus"
@@ -225,6 +243,38 @@ class BuildCorpus(TempDirCase):
         self.assertEqual(result.returncode, 2)
         self.assertEqual(items, [])
         self.assertEqual(json.loads(result.stdout)["items"], 0)
+        self.assertIn("no items survived the filters", result.stderr)
+
+    def test_no_claude_data_names_the_directory(self):
+        empty = self.root / "no-claude"
+        empty.mkdir()
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "build_corpus.py"),
+                                 "--claude-dir", str(empty), "--out-dir", str(self.root / "out")],
+                                capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(json.loads(result.stdout)["items"], 0)
+        self.assertTrue(result.stderr.startswith(f"no Claude Code data under {empty}"), result.stderr)
+        self.assertNotIn("survived", result.stderr)
+
+    def test_from_file_with_nothing_kept_reports_filters(self):
+        sample = self.root / "sample.txt"
+        sample.write_text("one\n\ntwo\n")
+        result, items = self.run_build("--from-file", str(sample))
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(items, [])
+        self.assertIn("no items survived the filters", result.stderr)
+        self.assertNotIn("Claude Code data", result.stderr)
+
+    def test_from_file_rejects_since(self):
+        sample = self.root / "sample.txt"
+        sample.write_text("first paragraph of the sample text\n")
+        result, items = self.run_build("--from-file", str(sample), "--since", "2026-01-01")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(items, [])
+        self.assertEqual(len(result.stderr.splitlines()), 1)
+        self.assertIn("--since", result.stderr)
+        self.assertIn("--from-file", result.stderr)
 
     def test_skip_reasons_are_counted(self):
         result, _ = self.build_ok()
@@ -256,6 +306,33 @@ class BuildCorpus(TempDirCase):
                                                 "make the footer logo bigger please"]))
 
 
+    def test_huge_assistant_lines_are_not_parsed(self):
+        claude = self.root / "claude-huge"
+        # Truncated JSON: if the line were parsed it would count as malformed.
+        huge = '{"type":"assistant","message":{"role":"assistant","content":"' + "x" * 3_000_000
+        write_jsonl(claude / "projects/-x-p/s.jsonl", [huge, user("keep this typed prompt please")])
+        out = self.root / "out-huge"
+        result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "build_corpus.py"),
+                                 "--claude-dir", str(claude), "--out-dir", str(out)],
+                                capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        summary = json.loads(result.stdout)
+        self.assertEqual(summary["skipped"]["malformed"], 0)
+        self.assertEqual(summary["transcript_records"], 1)
+        texts = [json.loads(line)["text"] for line in (out / "me.corpus.jsonl").read_text().splitlines()]
+        self.assertEqual(texts, ["keep this typed prompt please"])
+
+    def test_both_spellings_of_the_user_type_key_are_read(self):
+        mod = load("build_corpus")
+        path = self.root / "spellings.jsonl"
+        path.write_text('{"type":"user","message":{"role":"user","content":"compact key prompt here"}}\n'
+                        '{"type": "user", "message": {"role": "user", "content": "spaced key prompt here"}}\n'
+                        '{"type":"assistant","message":{"role":"assistant","content":"model words"}}\n')
+        records = list(mod._read_json_lines(path, mod.Counter(), mod.USER_NEEDLES))
+        self.assertEqual([r["message"]["content"] for r in records],
+                         ["compact key prompt here", "spaced key prompt here"])
+
+
 class CleanText(unittest.TestCase):
     def setUp(self):
         self.mod = load("build_corpus")
@@ -265,6 +342,22 @@ class CleanText(unittest.TestCase):
             self.mod.scrub("call +33 6 12 34 56 78 at 10.0.0.1 token "
                            "ghp_abcdefghijklmnopqrstuvwxyz0123456789 Bearer abc.def"),
             "call <PHONE> at <IP> token <TOKEN> Bearer <TOKEN>")
+
+    def test_scrub_leaves_long_paths_without_digits(self):
+        text = "see ghostwriter/references/research-playbook.md and tests/test_ghostwriter.py"
+        self.assertEqual(self.mod.scrub(text), text)
+
+    def test_scrub_replaces_long_runs_with_a_digit(self):
+        self.assertEqual(self.mod.scrub("key abcdefghijklmnopqrstuvwxyz0123456789ab ok"), "key <TOKEN> ok")
+        self.assertEqual(self.mod.scrub("aws wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"), "aws <TOKEN>")
+
+    def test_scrub_replaces_long_digit_free_runs_without_a_slash(self):
+        self.assertEqual(self.mod.scrub("key abcdefghijklmnopqrstuvwxyzabcdef ok"), "key <TOKEN> ok")
+        self.assertEqual(self.mod.scrub("see docs/design/ghostwriter-design-notes.md"),
+                         "see docs/design/ghostwriter-design-notes.md")
+
+    def test_token_pattern_matches_the_validator(self):
+        self.assertEqual(self.mod.TOKEN_RE.pattern, load("validate_profile").TOKEN_RE.pattern)
 
     def test_clean_text_keeps_user_words(self):
         self.assertEqual(self.mod.clean_text("Hello\r\n\r\nworld   again"), "Hello world again")
@@ -378,6 +471,28 @@ class StyleStats(TempDirCase):
         self.assertIsNone(s)
         self.assertFalse((self.root / "me.sample.md").exists())
 
+    def test_out_paths_in_missing_directories_are_created_privately(self):
+        stats_out = self.root / "new/deep/me.stats.json"
+        sample_out = self.root / "new/me.sample.md"
+        result, _ = self.run_stats(SIX_ITEMS, "--stats-out", str(stats_out), "--sample-out", str(sample_out))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path in (stats_out, sample_out):
+            self.assertEqual(oct(path.stat().st_mode & 0o777), "0o600", path)
+        for path in (self.root / "new", self.root / "new/deep"):
+            self.assertEqual(oct(path.stat().st_mode & 0o777), "0o700", path)
+        self.assertEqual(json.loads(result.stdout)["stats"], str(stats_out))
+
+    def test_out_path_blocked_by_a_file_fails_with_one_line(self):
+        blocker = self.root / "blocker"
+        blocker.write_text("not a directory")
+        result, _ = self.run_stats(SIX_ITEMS, "--stats-out", str(blocker / "me.stats.json"))
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertEqual(len(result.stderr.splitlines()), 1)
+        self.assertTrue(result.stderr.startswith("error: "), result.stderr)
+        self.assertIn(str(blocker), result.stderr)
+
 
 VALID_PROFILE = """---
 name: Valid Example
@@ -481,6 +596,28 @@ class ValidateProfile(TempDirCase):
         self.assertIn("missing key: confidence", result.stdout)
         self.assertIn("invalid kind: robot", result.stdout)
 
+    def test_inline_comments_in_front_matter_are_ignored(self):
+        text = (VALID_PROFILE.replace("version: 1\n", "version: 1  # bump on every edit\n")
+                .replace("confidence: low\n", "confidence: low # from a short sample\n")
+                .replace("channels: [email, reddit, tweet, other]\n",
+                         "channels: [email, reddit, tweet, other] # all four\n")
+                .replace("  - pasted sample\n", "  - pasted sample # one message\n"))
+        result = self.validate("valid.md", text)
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_front_matter_comments_respect_quotes(self):
+        mod = load("validate_profile")
+        data, _ = mod.parse_front_matter('---\nname: "C# dev" # alias\nnote: # nothing yet\nversion: 2 # bumped\n'
+                                         "sources: # listed below\n  - sample # typed\n---\nbody")
+        self.assertEqual(data, {"name": "C# dev", "note": None, "version": 2, "sources": ["sample"]})
+
+    def test_quoted_version_is_reported_with_its_quotes(self):
+        result = self.validate("valid.md", VALID_PROFILE.replace("version: 1\n", 'version: "1"\n'))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('invalid version: "1"', result.stdout)
+        result = self.validate("valid.md", VALID_PROFILE.replace("version: 1\n", "version: one\n"))
+        self.assertIn("invalid version: one", result.stdout)
+
     def test_forty_word_exemplar_fails(self):
         long_item = "- " + " ".join(["word"] * 40) + "\n"
         result = self.validate("valid.md", VALID_PROFILE.replace("- Third exemplar", long_item + "- Third exemplar"))
@@ -494,6 +631,16 @@ class ValidateProfile(TempDirCase):
     def test_email_in_body_fails(self):
         result = self.validate("valid.md", VALID_PROFILE.replace("## Provenance\n", "## Provenance\nwrite to foo@bar.com\n"))
         self.assertIn("email in body", result.stdout)
+
+    def test_repository_path_in_body_passes(self):
+        text = VALID_PROFILE.replace("## Provenance\n",
+                                     "## Provenance\nResearched per ghostwriter/references/research-playbook.md.\n")
+        result = self.validate("valid.md", text)
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_secret_like_run_in_body_fails(self):
+        text = VALID_PROFILE.replace("## Provenance\n", "## Provenance\nkey abcdefghijklmnopqrstuvwxyz0123456789ab\n")
+        self.assertIn("token in body", self.validate("valid.md", text).stdout)
 
     def test_url_allowed_in_sources_but_not_body(self):
         with_source = VALID_PROFILE.replace("  - pasted sample", "  - https://example.com/interview")
@@ -592,12 +739,16 @@ class ValidateProfile(TempDirCase):
         shipped = self.root / "shipped"
         shipped.mkdir()
         (shipped / "deadpool.md").write_text(PERSONA_PROFILE.replace("slug: valid", "slug: deadpool"))
+        (shipped / "narrator.md").write_text(PERSONA_PROFILE.replace("slug: valid", "slug: narrator"))
         (shipped / "_template.md").write_text(VALID_PROFILE.replace("slug: valid", "slug: _template"))
         env = {**os.environ, "HOME": str(self.root), "GHOSTWRITER_HOME": "~/cfg"}
         result = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_profile.py"), "--list",
                                  "--shipped", str(shipped)], capture_output=True, text=True, env=env, timeout=60)
-        self.assertEqual(result.stdout.splitlines(),
-                         ["deadpool\tpersona\tuser (shadows shipped)", "me\tsample\tuser"])
+        self.assertEqual(result.stdout.splitlines(), [
+            f"deadpool\tpersona\tuser (shadows shipped)\t{home / 'tones/deadpool.md'}",
+            f"me\tsample\tuser\t{home / 'tones/me.md'}",
+            f"narrator\tpersona\tshipped\t{shipped / 'narrator.md'}",
+        ])
 
 
 class SkillPackage(unittest.TestCase):

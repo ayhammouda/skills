@@ -77,13 +77,18 @@ EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 TOKEN_RE = re.compile(
     r"\b(?:sk-|ghp_|gho_|xox[abp]-|AKIA|AIza)[A-Za-z0-9_\-]{8,}"
     r"|(?<=Bearer\s)\S+"
-    r"|[A-Za-z0-9+/_=\-]{32,}"
+    # A run of 32+ key-like characters, tested once at its start. A run with a slash and no
+    # digit is a path such as references/research-playbook.md, not a key.
+    r"|(?<![A-Za-z0-9+/_=\-])(?:(?=[A-Za-z+/_=\-]*\d)|(?![A-Za-z0-9+_=\-]*/))[A-Za-z0-9+/_=\-]{32,}"
 )
 IP_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 PHONE_RE = re.compile(r"\+?\d(?:[ .]?\d){8,14}")
 
 DROP_REASONS = ("slash", "short", "long", "markup", "duplicate", "skipped_record", "before_since")
 SKIP_REASONS = ("malformed", "sidechain", "meta", "compact", "sdk", "origin")
+# Transcript lines are parsed only when they can be user records; assistant lines can run to
+# megabytes of tool input and are never needed.
+USER_NEEDLES = ('"type":"user"', '"type": "user"')
 
 
 @dataclass
@@ -157,7 +162,8 @@ def _iso_from_string(value) -> str | None:
     return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _read_json_lines(path: Path, counts: Counter):
+def _read_json_lines(path: Path, counts: Counter, needles: tuple[str, ...] = ()):
+    """Yield the JSON objects in path; with needles, parse only lines that contain one of them."""
     try:
         handle = path.open(encoding="utf-8", errors="replace")
     except OSError:
@@ -165,6 +171,8 @@ def _read_json_lines(path: Path, counts: Counter):
     with handle:
         for line in handle:
             if not line.strip():
+                continue
+            if needles and not any(needle in line for needle in needles):
                 continue
             try:
                 record = json.loads(line)
@@ -212,7 +220,7 @@ def iter_transcripts(projects_dir: Path, counts: Counter | None = None) -> Itera
     """Yield typed user turns from session transcripts one level under projects_dir."""
     counts = Counter() if counts is None else counts
     for path in sorted(projects_dir.glob("*/*.jsonl")):
-        for record in _read_json_lines(path, counts):
+        for record in _read_json_lines(path, counts, USER_NEEDLES):
             if record.get("type") != "user":
                 continue
             message = record.get("message")
@@ -358,12 +366,20 @@ def main(argv: list[str]) -> int:
     if args.from_file is not None and not args.from_file.is_file():
         print(f"error: {args.from_file} is not a readable file", file=sys.stderr)
         return 1
+    if args.from_file is not None and args.since:
+        print("error: --since cannot be combined with --from-file; sample paragraphs carry no date",
+              file=sys.stderr)
+        return 1
+    claude_dir = args.claude_dir.expanduser()
     out_dir = args.out_dir.expanduser() if args.out_dir else _default_home() / "corpus"
-    summary = build(args.claude_dir.expanduser(), out_dir, args.slug, args.since,
-                    args.min_words, args.max_words, args.from_file, tighten_dir=args.out_dir is None)
+    summary = build(claude_dir, out_dir, args.slug, args.since, args.min_words, args.max_words,
+                    args.from_file, tighten_dir=args.out_dir is None)
     print(json.dumps(summary))
     if summary["items"] == 0:
-        print("no items survived the filters; nothing written", file=sys.stderr)
+        if args.from_file is None and not (summary["history_rows"] or summary["transcript_records"]):
+            print(f"no Claude Code data under {claude_dir}; nothing written", file=sys.stderr)
+        else:
+            print("no items survived the filters; nothing written", file=sys.stderr)
         return 2
     return 0
 

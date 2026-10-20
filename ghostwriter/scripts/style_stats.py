@@ -203,7 +203,20 @@ def render_sample(items: list[dict], stats: dict, picked: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _ensure_private_dir(path: Path) -> None:
+    """Create path and any missing parents with owner-only permissions."""
+    missing = []
+    current = path
+    while not current.exists():
+        missing.append(current)
+        current = current.parent
+    for directory in reversed(missing):
+        directory.mkdir(mode=0o700)
+        os.chmod(directory, 0o700)
+
+
 def _write_private(path: Path, text: str) -> None:
+    _ensure_private_dir(path.parent)
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -255,8 +268,14 @@ def main(argv: list[str]) -> int:
     sample_out = args.sample_out.expanduser() if args.sample_out else sample_out
     stats = compute_stats(items)
     picked = stratified_sample(items, args.sample_size, args.seed)
-    _write_private(stats_out, json.dumps(stats, indent=2, ensure_ascii=False) + "\n")
-    _write_private(sample_out, render_sample(items, stats, picked))
+    outputs = ((stats_out, json.dumps(stats, indent=2, ensure_ascii=False) + "\n"),
+               (sample_out, render_sample(items, stats, picked)))
+    for target, text in outputs:
+        try:
+            _write_private(target, text)
+        except OSError as error:
+            print(f"error: cannot write {target}: {error.strerror or error}", file=sys.stderr)
+            return 1
     print(json.dumps({"items": stats["items"], "words": stats["words"], "sampled": len(picked),
                       "stats": str(stats_out), "sample": str(sample_out)}))
     return 0
